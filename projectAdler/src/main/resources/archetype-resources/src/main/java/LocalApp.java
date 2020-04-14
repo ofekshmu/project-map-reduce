@@ -20,51 +20,41 @@ public class LocalApp {
 
     final static Tag TAG_MANAGER = new Tag("name","manager");
     private static String LocalAppID;
-    private static String shortLocalAppID;
+    private static String shortLocalAppID; //TODO: WHATS THAT	
 
     public static void main( String[] args ){
 
         java.util.logging.Logger
                 .getLogger("com.amazonaws.util.Base64").setLevel(Level.OFF);
 
-        // General vars
+        // parsing inputs 
         String inputFileName = args[0];
         String outputFileName = args[1];
         int n = Integer.parseInt(args[2]);
         boolean terminate = false;
 
-        boolean overwriteScript = false;
+        boolean overwriteScript = false; //TODO
         boolean overwriteJars = false;
 
-        /** 1. if you want to terminate the manager args = inputFileName outputFileName n terminate */
+        /** In case of termination a "terminate string should be inserted in the end */
         if (args.length > 3 && args[3].equals("terminate"))
             terminate = true;
 
         // Promotion
         System.out.println("****************************************************************");
-        System.out.println(
-                "_____/\\\\\\\\\\\\\\\\\\______/\\\\\\______________/\\\\\\____/\\\\\\\\\\\\\\\\\\\\\\___        \n" +
-                        " ___/\\\\\\\\\\\\\\\\\\\\\\\\\\___\\/\\\\\\_____________\\/\\\\\\__/\\\\\\/////////\\\\\\_       \n" +
-                        "  __/\\\\\\/////////\\\\\\__\\/\\\\\\_____________\\/\\\\\\_\\//\\\\\\______\\///__      \n" +
-                        "   _\\/\\\\\\_______\\/\\\\\\__\\//\\\\\\____/\\\\\\____/\\\\\\___\\////\\\\\\_________     \n" +
-                        "    _\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\___\\//\\\\\\__/\\\\\\\\\\__/\\\\\\_______\\////\\\\\\______    \n" +
-                        "     _\\/\\\\\\/////////\\\\\\____\\//\\\\\\/\\\\\\/\\\\\\/\\\\\\___________\\////\\\\\\___   \n" +
-                        "      _\\/\\\\\\_______\\/\\\\\\_____\\//\\\\\\\\\\\\//\\\\\\\\\\_____/\\\\\\______\\//\\\\\\__  \n" +
-                        "       _\\/\\\\\\_______\\/\\\\\\______\\//\\\\\\__\\//\\\\\\_____\\///\\\\\\\\\\\\\\\\\\\\\\/___ \n" +
-                        "        _\\///________\\///________\\///____\\///________\\///////////_____\n");
         System.out.println(" Distriduted System Programming : PDF Document Conversion in the Cloud");
-        System.out.println(" By Maor Assayag & Refahel Shetrit \n");
-        System.out.println("\n Stage 1|    Local AWS App has been started \n");
+        System.out.println(" By Ofek Shmuel and Naveh \n");
+        System.out.println("\n Step 1: create an instance of the LocalCloud \n");
 
-        // Initialize mAWS object and get a random UUID
+        // Initialize LocalCLoud object and get a random UUID to identify this current local app
         LocalAppID = UUID.randomUUID().toString();
         shortLocalAppID = LocalAppID.substring(0, 12); // used for uniq bucket name for each LocalApp
-        mAWS myAWS = new mAWS(true);
-        myAWS.initAWSservices();
+        LocalCLoud myLocalCLoud = new LocalCLoud(true);
+        myLocalCloud.initAWSservices();
         String managerID;
         try {
             /**2. Start a Manager instance on EC2 (if its not already running) */
-            String[] results = checkManager(myAWS);
+            String[] results = checkManager(myLocalCLoud);
             if (results[0] != null) {
                 managerID = results[0];
                 // Promotion of running Manager

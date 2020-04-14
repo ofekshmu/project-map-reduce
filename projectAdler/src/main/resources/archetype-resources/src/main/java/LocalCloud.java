@@ -35,23 +35,23 @@ import com.amazonaws.util.Base64;
  * Creators : Maor Assayag
  *            Refahel Shetrit
  *
- * mAWS class - Barebone of AWS handling. Creating, Managing & Terminating instance of
+ * LocalCLoud class - Barebone of AWS handling. Creating, Managing & Terminating instance of
  * S3 storage, EC2 instances and SQS queue of messages.
  */
-public class mAWS {
+public class LocalCLoud {
 
     private AmazonSQS mSQS;
-    private AmazonEC2 mEC2;
+    private AmazonEC2 ec2;
     private AmazonS3 mS3;
     private AWSCredentials credentials;
     private boolean fromLocal;
 
     /**
-     * mAWS - get your credentials from the "credentials" file inside you .aws folder
+     * LocalCLoud - get your credentials from the "credentials" file inside you .aws folder
      *
      * @param fromLocal doest the current java file is running locally or from the cloud
      */
-    public mAWS(boolean fromLocal){
+    public LocalCLoud(boolean fromLocal){
         this.fromLocal = fromLocal;
         if(fromLocal){
             credentials = new ProfileCredentialsProvider().getCredentials();
@@ -70,8 +70,8 @@ public class mAWS {
     /**
      * initialize EC2 service, Region = US_EAST_1
      */
-    public void initEC2(){
-        if (this.fromLocal){
+    public void initEC2(){ //ami-076515f20540e6e0b
+       /** if (this.fromLocal){
             mEC2 = AmazonEC2ClientBuilder.standard()
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
                     .withRegion(Regions.US_EAST_1)
@@ -81,7 +81,9 @@ public class mAWS {
             mEC2 = AmazonEC2ClientBuilder.standard()
                     .withRegion(Regions.US_EAST_1)
                     .build();
-        }
+        }*/
+    	Ec2Client this.ec2 = Ec2Client.create();
+    	
     }
 
     /**
