@@ -14,7 +14,7 @@ import com.amazonaws.services.sqs.model.Message;
 
 /**
  * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2020/Spring
- * Assignment 1
+ * Assignment 1!
  */
 public class LocalApp {
 
