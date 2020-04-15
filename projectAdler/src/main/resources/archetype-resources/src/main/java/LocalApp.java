@@ -18,7 +18,7 @@ import com.amazonaws.services.sqs.model.Message;
  */
 public class LocalApp {
 
-    final static Tag TAG_MANAGER = new Tag("name","manager");
+    final static Tag TAG_MANAGER = new Tag("name","manager"); // define a name for the manger pc to be created 
     private static String LocalAppID;
     private static String shortLocalAppID; //TODO: WHATS THAT	
 
@@ -76,7 +76,7 @@ public class LocalApp {
                     System.out.println("\n Stage 2|    Manager instance has been rebooted, Manager ID : " + managerID + "\n");
 
                 } else{
-                    managerID = startManager(myAWS, overwriteScript, overwriteJars);
+                    managerID = startManager(myLocalCLoud, overwriteScript, overwriteJars);
                     // Promotion of new Manager
                     System.out.println("             Manager instance has been started, Manager ID : " + managerID + "\n");
                 }

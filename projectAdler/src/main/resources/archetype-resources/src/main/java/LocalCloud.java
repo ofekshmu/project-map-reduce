@@ -61,7 +61,7 @@ public class LocalCLoud {
     /**
      * initAWSservices - init all services
      */
-    public void initAWSservices(){
+    public void initCloudservices(){
         initEC2();
         initS3();
         initSQS();
@@ -82,8 +82,20 @@ public class LocalCLoud {
                     .withRegion(Regions.US_EAST_1)
                     .build();
         }*/
-    	Ec2Client this.ec2 = Ec2Client.create();
     	
+    	Ec2Client this.ec2 = Ec2Client.create();
+    	// this is a custom build for a set of computers defined by our personal needs
+    	RunInstancesRequest runRequest = RunInstancesRequest.builder()
+    			.imageId(amiId)
+                .instanceType(InstanceType.T1_MICRO)
+                .maxCount(1)
+                .minCount(1)
+                .build();	
+    	// response is a list of the received computers, after asking for a set as defined in the runRequest,
+    	// a @response is returned after a set amount of time (when all computers are ready to use)
+    	RunInstancesResponse response = ec2.runInstances(runRequest);
+    	/** with this we can get the id of a single computer */
+    	String instanceId = response.instances().get(0).instanceId();
     }
 
     /**
@@ -158,8 +170,49 @@ public class LocalCLoud {
         }
         return instancesId;
     }
+    /** 
+     * initialize_manager - initialize a computer and sets tag as a manager 
+     * @return the masters id
+    */
+    public void initialize_manager()
+    {        
+    	// define a request
+        RunInstancesRequest runRequest = RunInstancesRequest.builder()
+                .imageId("ami-076515f20540e6e0b") // recommanded image
+                .instanceType(InstanceType.T1_MICRO)
+                .maxCount(1)
+                .minCount(1) // we want 1 computer for a manager
+                .build();
+        // a responce may take a set a mount of time before server returns all computers acording to request info
+        RunInstancesResponse response = this.ec2.runInstances(runRequest); // response will be a list on instances
+        
+        String instanceId = response.instances().get(0).instanceId(); // we will take the first and only instance id
+ 
+        Tag tag = Tag.builder() // set the tag
+                .key("Name")
+                .value("Manager")
+                .build();
+ 		
+        CreateTagsRequest tagRequest = CreateTagsRequest.builder()
+                .resources(instanceId)
+                .tags(tag)
+                .build();
+ 
+        try {
+            this.ec2.createTags(tagRequest);
+            System.out.printf(
+                    "Successfully started EC2 instance %s based on AMI %s",
+                    instanceId, amiId);
+        } catch (Ec2Exception e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        // snippet-end:[ec2.java2.create_instance.main]
+        System.out.println("Manager has been initialized");
+        return instanceId;
 
 
+    }
 
     /**
      * initEC2instance - init instances on EC2 AWS service
@@ -174,7 +227,7 @@ public class LocalCLoud {
      * @return list with all the instance's id created
      */
     public ArrayList<String> initEC2instance(String imageId, Integer minCount, Integer maxCount, String type, String bucketName, String userData, String keyName, Tag tag){
-
+    	//TODO: ofeks note this works when a new manager needs to e assigned by the local or when a new worker needs to be assigned by manager
         ArrayList<String> instancesId = new ArrayList<String>();
         String userScript = null;
 
