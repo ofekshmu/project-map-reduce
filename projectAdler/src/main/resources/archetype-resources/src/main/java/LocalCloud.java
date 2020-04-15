@@ -40,9 +40,9 @@ import com.amazonaws.util.Base64;
  */
 public class LocalCLoud {
 
-    private AmazonSQS mSQS;
+    private AmazonSQS sqs;
     private AmazonEC2 ec2;
-    private AmazonS3 mS3;
+    private AmazonS3 s3;
     private AWSCredentials credentials;
     private boolean fromLocal;
 
@@ -320,7 +320,7 @@ public class LocalCLoud {
      * initialize S3 services
      */
     public void initS3(){
-        if(this.fromLocal){
+       /** if(this.fromLocal){
             mS3 = AmazonS3ClientBuilder
                     .standard()
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
@@ -332,7 +332,14 @@ public class LocalCLoud {
                     .standard()
                     .withRegion(Regions.US_EAST_1)
                     .build();
-        }
+        }*/
+    	Region region = Region.US_WEST_2;
+        this.s3 = S3Client.builder().region(region).build();
+        
+        String bucket = "bucket" + System.currentTimeMillis();
+        String key = "key";
+ 
+        createBucket(bucket, region);
     }
 
     /**
@@ -427,7 +434,7 @@ public class LocalCLoud {
      * initialize SQS services
      */
     public void initSQS(){
-        if(this.fromLocal){
+        /**if(this.fromLocal){
             mSQS = AmazonSQSClientBuilder
                     .standard()
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
@@ -438,7 +445,9 @@ public class LocalCLoud {
                     .standard()
                     .withRegion(Regions.US_EAST_1)
                     .build();
-        }
+        }*/
+    	
+    	this.sqs = SqsClient.builder().region(Region.US_WEST_2).build();
     }
 
     /**
