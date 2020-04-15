@@ -84,18 +84,7 @@ public class LocalCLoud {
         }*/
     	
     	Ec2Client this.ec2 = Ec2Client.create();
-    	// this is a custom build for a set of computers defined by our personal needs
-    	RunInstancesRequest runRequest = RunInstancesRequest.builder()
-    			.imageId(amiId)
-                .instanceType(InstanceType.T1_MICRO)
-                .maxCount(1)
-                .minCount(1)
-                .build();	
-    	// response is a list of the received computers, after asking for a set as defined in the runRequest,
-    	// a @response is returned after a set amount of time (when all computers are ready to use)
-    	RunInstancesResponse response = ec2.runInstances(runRequest);
-    	/** with this we can get the id of a single computer */
-    	String instanceId = response.instances().get(0).instanceId();
+
     }
 
     /**
