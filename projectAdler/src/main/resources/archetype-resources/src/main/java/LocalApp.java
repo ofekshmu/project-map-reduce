@@ -75,10 +75,9 @@ public class LocalApp {
                     // Promotion of rebooted Manager
                     System.out.println("\n Stage 2|    Manager instance has been rebooted, Manager ID : " + managerID + "\n");
 
-                } else{
+                } else{ // a new manager is initialized
                     managerID = startManager(myLocalCLoud, overwriteScript, overwriteJars);
-                    // Promotion of new Manager
-                    System.out.println("             Manager instance has been started, Manager ID : " + managerID + "\n");
+                    System.out.println("(*edit* did inner function print?* Manager instance has been started, Manager ID : " + managerID + "\n");
                 }
             }
 
@@ -174,6 +173,7 @@ public class LocalApp {
     }
 
     /**
+     * TODO: NEED TO RE-EDIT TEXT AND CHECK SYNTAX
      * startManager - method used to start a manager if a manager isn't active
      * Recommended AMI image which supports user-data : ami-51792c38
      * Currently using T2 instances are Burstable Performance Instances that provide
@@ -185,13 +185,10 @@ public class LocalApp {
      * @param overwriteScript doest we want to overwrite the scripts on pre-upload bucket ?
      * @return the id of a manager instance that has been created
      */
-    private static String startManager(mAWS myAWS, boolean overwriteScript, boolean overwriteJars) {
+    private static String startManager(mAWS myLocalCloud, boolean overwriteScript, boolean overwriteJars) {
         uploadScripts(myAWS, overwriteScript);
         uploadJars(myAWS, overwriteJars);
-        ArrayList<String> managerInstance = myAWS.initEC2instance(Header.imageID,
-                1, 1, InstanceType.T2Micro.toString(), Header.PRE_UPLOAD_BUCKET_NAME,
-                Header.MANAGER_SCRIPT, Header.INSTANCE_MANAGER_KEY_NAME, TAG_MANAGER);
-        return 	managerInstance.get(0);
+        return myLocalCLoud.initialize_manager(); // returns string representing manager id
     }
 
     /**

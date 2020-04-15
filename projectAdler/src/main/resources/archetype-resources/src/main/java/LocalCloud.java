@@ -163,7 +163,7 @@ public class LocalCLoud {
      * initialize_manager - initialize a computer and sets tag as a manager 
      * @return the masters id
     */
-    public void initialize_manager()
+    public String initialize_manager()
     {        
     	// define a request
         RunInstancesRequest runRequest = RunInstancesRequest.builder()
@@ -199,10 +199,10 @@ public class LocalCLoud {
         // snippet-end:[ec2.java2.create_instance.main]
         System.out.println("Manager has been initialized");
         return instanceId;
-
-
     }
 
+    
+    
     /**
      * initEC2instance - init instances on EC2 AWS service
      *
