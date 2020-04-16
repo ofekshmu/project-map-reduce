@@ -1,15 +1,9 @@
 /**
- * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2019/Spring
+ * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2020/Spring
  * Assignment 1
- *
- * DSP Local Application
- * PDF Document Conversion in the Cloud
- *
- * Creators : Maor Assayag
- *            Refahel Shetrit
- *
- * Header class - Global (static) final values across all classes
+ * Global (static) final values across all classes
  */
+
 
 public class Header {
     // Key name of the .pem file that contains identifiers to access the instances

@@ -18,7 +18,6 @@ import com.amazonaws.services.sqs.model.Message;
  */
 public class LocalApp {
 
-    final static Tag TAG_MANAGER = new Tag("name","manager"); // define a name for the manger pc to be created 
     private static String LocalAppID;
     private static String shortLocalAppID; //TODO: WHATS THAT	
 
@@ -69,7 +68,7 @@ public class LocalApp {
                 managerID = results[1];
                 Boolean restartResult = false;
                 if (managerID !=null) {
-                    restartResult = myAWS.restartEC2instance(managerID);}
+                    restartResult = myLocalCloud.restartEC2instance(managerID);}
 
                 if (restartResult){
                     // Promotion of rebooted Manager
