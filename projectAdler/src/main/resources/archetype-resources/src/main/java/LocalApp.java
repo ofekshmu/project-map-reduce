@@ -198,7 +198,7 @@ public class LocalApp {
      * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
      * @return instanceID if manager found, else null
      */
-    private static String[] checkManager(mAWS myAWS) {
+    private static String[] checkManager(myLocalCloud myAWS) {
         String[] results = new String[3];
         results[0] = myAWS.getEC2instanceID(TAG_MANAGER, "running");
         results[1] = myAWS.getEC2instanceID(TAG_MANAGER, "pending");
