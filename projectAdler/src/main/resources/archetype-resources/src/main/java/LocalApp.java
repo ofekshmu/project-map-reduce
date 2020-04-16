@@ -49,8 +49,8 @@ public class LocalApp {
         // Initialize LocalCLoud object and get a random UUID to identify this current local app
         LocalAppID = UUID.randomUUID().toString();
         shortLocalAppID = LocalAppID.substring(0, 12); // used for uniq bucket name for each LocalApp
-        LocalCLoud myLocalCLoud = new LocalCLoud(true);
-        myLocalCloud.initAWSservices();
+        LocalCloud myLocalCLoud = new LocalCloud(true);
+        myLocalCloud.init_services();
         String managerID;
         try {
             /**2. Start a Manager instance on EC2 (if its not already running) */

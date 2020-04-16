@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="main/java/|main/resources/|test/java/" kind="src" path="src"/>
-	<classpathentry kind="src" output="target/test-classes" path="src/test/java">
-		<attributes>
-			<attribute name="test" value="true"/>
-			<attribute name="optional" value="true"/>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry excluding="test/java/" kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/J2SE-1.5">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
@@ -18,5 +11,31 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/annotations-2.11.10.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/aws-core-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/bom-internal-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/commons-logging-1.2-src.zip"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/dynamodb-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/ec2-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/fontbox-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/http-client-spi-2.11.10.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/jackson-annotations-2.10.0.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/jackson-core-2.10.0.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/jackson-databind-2.10.0.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/jar_files.zip"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/pdfbox-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/pdfbox-tools-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/preflight-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/profiles-2.11.10.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/protocol-core-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/reactive-streams-1.0.2.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/regions-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/s3-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/sdk-core-2.11.10.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/slf4j-api-1.7.28.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/sqs-2.11.9.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/utils-2.11.10.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/xmpbox-2.0.19.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

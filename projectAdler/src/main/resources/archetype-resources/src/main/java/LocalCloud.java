@@ -1,4 +1,49 @@
+
 import java.io.*;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.Paths;
+import java.util.Random;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.InstanceType;
+import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.RunInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.Tag;
+import software.amazon.awssdk.services.ec2.model.CreateTagsRequest;
+import software.amazon.awssdk.services.ec2.model.Ec2Exception;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
+import software.amazon.awssdk.services.sqs.model.CreateQueueResponse;
+import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
+import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
+import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.QueueNameExistsException;
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import java.util.Date;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,23 +53,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.AbstractMap.SimpleEntry;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import com.amazonaws.services.ec2.model.*;
-import com.amazonaws.services.ec2.model.Tag;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.*;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.*;
-import com.amazonaws.util.Base64;
-
+import software.amazon.awssdk.services.sqs.SqsClient;
 /**
  * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2019/Spring
  * Assignment 1
@@ -38,12 +67,12 @@ import com.amazonaws.util.Base64;
  * LocalCLoud class - Barebone of AWS handling. Creating, Managing & Terminating instance of
  * S3 storage, EC2 instances and SQS queue of messages.
  */
-public class LocalCLoud {
+public class LocalCloud {
 
-    private AmazonSQS sqs;
-    private AmazonEC2 ec2;
-    private AmazonS3 s3;
-    private AWSCredentials credentials;
+    private SqsClient sqs;
+    private Ec2Client ec2;
+    private S3Client s3;
+    //TODO:private  credentials;
     private boolean fromLocal;
 
     /**
@@ -51,17 +80,17 @@ public class LocalCLoud {
      *
      * @param fromLocal doest the current java file is running locally or from the cloud
      */
-    public LocalCLoud(boolean fromLocal){
+    public LocalCloud(boolean fromLocal){
         this.fromLocal = fromLocal;
         if(fromLocal){
-            credentials = new ProfileCredentialsProvider().getCredentials();
+            //TODO: credentials = new ProfileCredentialsProvider().getCredentials();
         }
     }
 
     /**
      * initAWSservices - init all services
      */
-    public void initCloudservices(){
+    public void init_services(){
         initEC2();
         initS3();
         initSQS();
@@ -83,7 +112,7 @@ public class LocalCLoud {
                     .build();
         }*/
     	
-    	Ec2Client this.ec2 = Ec2Client.create();
+    	this.ec2 = Ec2Client.create();
 
     }
 
@@ -191,7 +220,7 @@ public class LocalCLoud {
             this.ec2.createTags(tagRequest);
             System.out.printf(
                     "Successfully started EC2 instance %s based on AMI %s",
-                    instanceId, amiId);
+                    instanceId, "ami-076515f20540e6e0b");
         } catch (Ec2Exception e) {
             System.err.println(e.getMessage());
             System.exit(1);
