@@ -13,47 +13,67 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.sqs.model.Message;
 
 /**
- * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2020/Spring
- * Assignment 1!
+ * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2019/Spring
+ * Assignment 1
+ *
+ * DSP Local Application
+ * PDF Document Conversion in the Cloud
+ *
+ * Creators : Maor Assayag
+ *            Refahel Shetrit
+ *
+ * LocalApp class - represent the Local Application
+ * overwriteScript, overwriteJars to upload new jars\scripts to pre-upload bucket.
  */
 public class LocalApp {
 
+    final static Tag TAG_MANAGER = new Tag("name","manager");
     private static String LocalAppID;
-    private static String shortLocalAppID; //TODO: WHATS THAT	
+    private static String shortLocalAppID;
 
     public static void main( String[] args ){
 
         java.util.logging.Logger
                 .getLogger("com.amazonaws.util.Base64").setLevel(Level.OFF);
 
-        // parsing inputs 
+        // General vars
         String inputFileName = args[0];
         String outputFileName = args[1];
         int n = Integer.parseInt(args[2]);
         boolean terminate = false;
 
-        boolean overwriteScript = false; //TODO
+        boolean overwriteScript = false;
         boolean overwriteJars = false;
 
-        /** In case of termination a "terminate string should be inserted in the end */
+        /** 1. if you want to terminate the manager args = inputFileName outputFileName n terminate */
         if (args.length > 3 && args[3].equals("terminate"))
             terminate = true;
 
         // Promotion
         System.out.println("****************************************************************");
+        System.out.println(
+                "_____/\\\\\\\\\\\\\\\\\\______/\\\\\\______________/\\\\\\____/\\\\\\\\\\\\\\\\\\\\\\___        \n" +
+                        " ___/\\\\\\\\\\\\\\\\\\\\\\\\\\___\\/\\\\\\_____________\\/\\\\\\__/\\\\\\/////////\\\\\\_       \n" +
+                        "  __/\\\\\\/////////\\\\\\__\\/\\\\\\_____________\\/\\\\\\_\\//\\\\\\______\\///__      \n" +
+                        "   _\\/\\\\\\_______\\/\\\\\\__\\//\\\\\\____/\\\\\\____/\\\\\\___\\////\\\\\\_________     \n" +
+                        "    _\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\___\\//\\\\\\__/\\\\\\\\\\__/\\\\\\_______\\////\\\\\\______    \n" +
+                        "     _\\/\\\\\\/////////\\\\\\____\\//\\\\\\/\\\\\\/\\\\\\/\\\\\\___________\\////\\\\\\___   \n" +
+                        "      _\\/\\\\\\_______\\/\\\\\\_____\\//\\\\\\\\\\\\//\\\\\\\\\\_____/\\\\\\______\\//\\\\\\__  \n" +
+                        "       _\\/\\\\\\_______\\/\\\\\\______\\//\\\\\\__\\//\\\\\\_____\\///\\\\\\\\\\\\\\\\\\\\\\/___ \n" +
+                        "        _\\///________\\///________\\///____\\///________\\///////////_____\n");
         System.out.println(" Distriduted System Programming : PDF Document Conversion in the Cloud");
-        System.out.println(" By Ofek Shmuel and Naveh \n");
-        System.out.println("\n Step 1: create an instance of the LocalCloud \n");
+        System.out.println(" By Maor Assayag & Refahel Shetrit \n");
+        System.out.println("\n Stage 1|    Local AWS App has been started \n");
 
-        // Initialize LocalCLoud object and get a random UUID to identify this current local app
+        // Initialize mAWS object and get a random UUID
         LocalAppID = UUID.randomUUID().toString();
         shortLocalAppID = LocalAppID.substring(0, 12); // used for uniq bucket name for each LocalApp
-        LocalCloud myLocalCLoud = new LocalCloud(true);
-        myLocalCloud.init_services();
+        mAWS myAWS = new mAWS(true);
+        myAWS.initAWSservices();
         String managerID;
         try {
             /**2. Start a Manager instance on EC2 (if its not already running) */
-            String[] results = checkManager(myLocalCLoud);
+            String[] results = checkManager(myAWS);
             if (results[0] != null) {
                 managerID = results[0];
                 // Promotion of running Manager
@@ -68,15 +88,16 @@ public class LocalApp {
                 managerID = results[1];
                 Boolean restartResult = false;
                 if (managerID !=null) {
-                    restartResult = myLocalCloud.restartEC2instance(managerID);}
+                    restartResult = myAWS.restartEC2instance(managerID);}
 
                 if (restartResult){
                     // Promotion of rebooted Manager
                     System.out.println("\n Stage 2|    Manager instance has been rebooted, Manager ID : " + managerID + "\n");
 
-                } else{ // a new manager is initialized
-                    managerID = startManager(myLocalCLoud, overwriteScript, overwriteJars);
-                    System.out.println("(*edit* did inner function print?* Manager instance has been started, Manager ID : " + managerID + "\n");
+                } else{
+                    managerID = startManager(myAWS, overwriteScript, overwriteJars);
+                    // Promotion of new Manager
+                    System.out.println("             Manager instance has been started, Manager ID : " + managerID + "\n");
                 }
             }
 
@@ -172,7 +193,6 @@ public class LocalApp {
     }
 
     /**
-     * TODO: NEED TO RE-EDIT TEXT AND CHECK SYNTAX
      * startManager - method used to start a manager if a manager isn't active
      * Recommended AMI image which supports user-data : ami-51792c38
      * Currently using T2 instances are Burstable Performance Instances that provide
@@ -184,10 +204,13 @@ public class LocalApp {
      * @param overwriteScript doest we want to overwrite the scripts on pre-upload bucket ?
      * @return the id of a manager instance that has been created
      */
-    private static String startManager(mAWS myLocalCloud, boolean overwriteScript, boolean overwriteJars) {
+    private static String startManager(mAWS myAWS, boolean overwriteScript, boolean overwriteJars) {
         uploadScripts(myAWS, overwriteScript);
         uploadJars(myAWS, overwriteJars);
-        return myLocalCLoud.initialize_manager(); // returns string representing manager id
+        ArrayList<String> managerInstance = myAWS.initEC2instance(Header.imageID,
+                1, 1, InstanceType.T2Micro.toString(), Header.PRE_UPLOAD_BUCKET_NAME,
+                Header.MANAGER_SCRIPT, Header.INSTANCE_MANAGER_KEY_NAME, TAG_MANAGER);
+        return 	managerInstance.get(0);
     }
 
     /**
@@ -197,7 +220,7 @@ public class LocalApp {
      * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
      * @return instanceID if manager found, else null
      */
-    private static String[] checkManager(myLocalCloud myAWS) {
+    private static String[] checkManager(mAWS myAWS) {
         String[] results = new String[3];
         results[0] = myAWS.getEC2instanceID(TAG_MANAGER, "running");
         results[1] = myAWS.getEC2instanceID(TAG_MANAGER, "pending");
