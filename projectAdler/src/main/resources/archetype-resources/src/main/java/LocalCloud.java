@@ -159,7 +159,7 @@ public class LocalCloud {
     					//if(instance.getKey().equals(tag.getKey()) && instanceTag.getValue().equals(tag.getValue())){
     					for( Tag t : instance.tags())
                         	if(tag.equals(t) && instance.state().name().equals(state))
-                        		instancesId.add(instanc);
+                        		instancesId.add(instance.instanceId());
     				}
     			}
     			nextToken = response.nextToken();
@@ -168,7 +168,7 @@ public class LocalCloud {
     		} catch (Ec2Exception e) {	
     			e.getStackTrace();
     		}
-    	return null;
+    	return instancesId;
     }
     	
     	/**  List<Reservation> reservations = mEC2.describeInstances().getReservations();
