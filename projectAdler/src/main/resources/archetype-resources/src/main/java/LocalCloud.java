@@ -1,4 +1,5 @@
 import java.io.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,23 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import software.amazon.awssdk.services.ec2.model.Tag;
+
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+
 import java.util.AbstractMap.SimpleEntry;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import com.amazonaws.services.ec2.model.*;
-import com.amazonaws.services.ec2.model.Tag;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.*;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.*;
-import com.amazonaws.util.Base64;
+
 
 /**
  * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2020/Spring
@@ -32,9 +23,9 @@ import com.amazonaws.util.Base64;
 public class LocalCloud {
 
     private AmazonSQS mSQS;
-    private AmazonEC2 mEC2;
+    private Ec2Client mEC2;
     private AmazonS3 mS3;
-    private AWSCredentials credentials;
+    private InstanceProfileCredentialsProvider credentials;
     private boolean fromLocal;
 
     /**
@@ -45,7 +36,9 @@ public class LocalCloud {
     public LocalCloud(boolean fromLocal){
         this.fromLocal = fromLocal;
         if(fromLocal){
-            credentials = new ProfileCredentialsProvider().getCredentials();
+            credentials = InstanceProfileCredentialsProvider.builder()
+            		.asyncCredentialUpdateEnabled(true)
+            		.build();
         }
     }
 
@@ -63,15 +56,12 @@ public class LocalCloud {
      */
     public void initEC2(){
         if (this.fromLocal){
-            mEC2 = AmazonEC2ClientBuilder.standard()
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withRegion(Regions.US_EAST_1)
-                    .build();
+        	this.mEC2 = Ec2Client.builder()
+        			.credentialsProvider(this.credentials)  
+        			.build();
         }else{
             // We start instances on the cloud with IAM role
-            mEC2 = AmazonEC2ClientBuilder.standard()
-                    .withRegion(Regions.US_EAST_1)
-                    .build();
+        	this.mEC2 = Ec2Client.builder().build();
         }
     }
 
