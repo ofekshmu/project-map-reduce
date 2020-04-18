@@ -9,7 +9,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import software.amazon.awssdk.services.ec2.model.Tag;
-
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.Instance;
+import software.amazon.awssdk.services.ec2.model.Reservation;
+import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 
@@ -22,9 +29,9 @@ import java.util.AbstractMap.SimpleEntry;
  */
 public class LocalCloud {
 
-    private AmazonSQS mSQS;
+    private SqsClient mSQS;
     private Ec2Client mEC2;
-    private AmazonS3 mS3;
+    private S3Client mS3;
     private InstanceProfileCredentialsProvider credentials;
     private boolean fromLocal;
 
@@ -58,6 +65,7 @@ public class LocalCloud {
         if (this.fromLocal){
         	this.mEC2 = Ec2Client.builder()
         			.credentialsProvider(this.credentials)  
+        			
         			.build();
         }else{
             // We start instances on the cloud with IAM role
@@ -73,7 +81,34 @@ public class LocalCloud {
      * @return id of instance found by Tag and state
      */
     public String getEC2instanceID(Tag tag, String state){
-        List<Reservation> reservations = mEC2.describeInstances().getReservations();
+    	String nextToken = null;
+    	try {    
+    		do {        
+    			DescribeInstancesRequest request = DescribeInstancesRequest
+    					.builder()
+    					.maxResults(6) //TODO need to change
+    					.nextToken(nextToken)
+    					.build();        
+    			DescribeInstancesResponse response = this.mEC2.describeInstances(request);
+    			
+    			for (Reservation reservation : response.reservations()) {            
+    				for (Instance instance : reservation.instances()) {
+                        if ( instance.key
+    					//if(instance.getKey().equals(tag.getKey()) && instanceTag.getValue().equals(tag.getValue())){
+
+                        	if(instance.state().name().equals(state))
+                        		return instance.instanceId();
+    				}
+    			}
+    			
+    				nextToken = response.nextToken();
+    			} while (nextToken != null);
+    		} catch (Ec2Exception e) {	
+    			e.getStackTrace();
+    		}
+    	
+    	
+    	List<Reservation> reservations = mEC2.describeInstances().getReservations();
         for (Reservation reservation : reservations) {
             List<Instance> instances = reservation.getInstances();
             for (Instance instance : instances) {
