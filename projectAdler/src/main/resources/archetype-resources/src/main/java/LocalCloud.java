@@ -170,27 +170,6 @@ public class LocalCloud {
     		}
     	return instancesId;
     }
-    	
-    	/**  List<Reservation> reservations = mEC2.describeInstances().getReservations();
-        ArrayList<String> instancesId = new ArrayList<String>();
-        for (Reservation reservation : reservations) {
-            List<Instance> instances = reservation.getInstances();
-            for (Instance instance : instances) {
-                for (Tag instanceTag : instance.getTags()) {
-                    if(instanceTag.getKey().equals(tag.getKey()) && instanceTag.getValue().equals(tag.getValue())){
-                        // e.g.  the instance Tag name=Type and the value=Manager
-                        if(instance.getState().getName().equals(state)) {
-                            //System.out.println(instance.getInstanceId());
-                            instancesId.add(instance.getInstanceId());
-                        }
-                    }
-                }
-            }
-        }
-        return instancesId;
-    }
-*/
-
 
     /**
      * initEC2instance - init instances on EC2 AWS service
