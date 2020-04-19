@@ -1,4 +1,5 @@
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import software.amazon.awssdk.services.ec2.model.TerminateInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.Tag;
@@ -16,6 +18,7 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
@@ -32,11 +35,13 @@ import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
-
 import java.util.AbstractMap.SimpleEntry;
 import software.amazon.awssdk.regions.Region;
-//snippet-start:[sqs.java2.sqs_example.import]
+import software.amazon.awssdk.services.s3control.model.S3ObjectMetadata;
 import software.amazon.awssdk.services.sqs.model.ChangeMessageVisibilityRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlResponse;
@@ -370,24 +375,27 @@ public class LocalCloud {
         */
     }
 
-    public void mCreateFolderS3(String bucketName, String folderName) {
+    public void mCreateFolderS3(String bucketName, String folderName) throws S3Exception, AwsServiceException, SdkClientException, IOException {
         // create meta-data for your folder and set content-length to 0
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(0);
+    	//S3ObjectMetadata metadata = S3ObjectMetadata.builder().build();
+        //metadata.setContentLength(0);
 
         // create empty content
-        InputStream emptyContent = new ByteArrayInputStream(new byte[0]);
+        //InputStream emptyContent = new ByteArrayInputStream(new byte[0]);
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+        		.bucket(bucketName)
+        		.build();
 
 
         // create a PutObjectRequest passing the folder name suffixed by /
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName,
-                folderName + "/", emptyContent, metadata);
-
+        //PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName,
+        //        folderName + "/", emptyContent, metadata);
         // send request to S3 to create folder
-        this.mS3.putObject(putObjectRequest);
+        this.mS3.putObject(putObjectRequest, RequestBody.fromByteBuffer(getRandomByteBuffer(0)));
     }
 
-    /**
+    /**	
      * mDownloadS3file - if available download the desired file (by name key) from a bucket
      *
      * @param bucketName which bucket the file should be in
@@ -610,5 +618,10 @@ public class LocalCloud {
             npe.printStackTrace();
         }
         return ans;
+    }
+    private static ByteBuffer getRandomByteBuffer(int size) throws IOException {
+        byte[] b = new byte[size];
+        new Random().nextBytes(b);
+        return ByteBuffer.wrap(b);
     }
 }
