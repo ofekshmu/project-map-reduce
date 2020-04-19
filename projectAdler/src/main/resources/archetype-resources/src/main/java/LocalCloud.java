@@ -11,9 +11,12 @@ import java.util.Set;
 import software.amazon.awssdk.services.ec2.model.TerminateInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.Tag;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
@@ -28,7 +31,16 @@ import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
 import java.util.AbstractMap.SimpleEntry;
-
+import software.amazon.awssdk.regions.Region;
+//snippet-start:[sqs.java2.sqs_example.import]
+import software.amazon.awssdk.services.sqs.model.ChangeMessageVisibilityRequest;
+import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
+import software.amazon.awssdk.services.sqs.model.GetQueueUrlResponse;
+import software.amazon.awssdk.services.sqs.model.ListQueuesRequest;
+import software.amazon.awssdk.services.sqs.model.ListQueuesResponse;
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 /**
  * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2020/Spring
@@ -44,7 +56,6 @@ public class LocalCloud {
 
     /**
      * LocalCloud - get your credentials from the "credentials" file inside you .aws folder
-     *
      * @param fromLocal doest the current java file is running locally or from the cloud
      */
     public LocalCloud(boolean fromLocal){
@@ -72,7 +83,6 @@ public class LocalCloud {
         if (this.fromLocal){
         	this.mEC2 = Ec2Client.builder()
         			.credentialsProvider(this.credentials)  
-        			
         			.build();
         }else{
             // We start instances on the cloud with IAM role
@@ -298,18 +308,26 @@ public class LocalCloud {
      */
     public void initS3(){
         if(this.fromLocal){
-            mS3 = AmazonS3ClientBuilder
-                    .standard()
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withRegion(Regions.US_EAST_1)
-                    .build();
+            this.mS3 = S3Client.builder()
+            		.region(Region.US_WEST_2)        			
+            		.credentialsProvider(this.credentials)  
+            		.build();
         }else{
             // We start instances on the cloud with IAM role
-            mS3 = AmazonS3ClientBuilder
-                    .standard()
-                    .withRegion(Regions.US_EAST_1)
-                    .build();
+        	this.mS3 = S3Client.builder()
+            		.region(Region.US_WEST_2)        			
+            		.build();
         }
+        
+        String bucket = "bucket" + System.currentTimeMillis();
+        CreateBucketRequest createBucketRequest = CreateBucketRequest
+                .builder()
+                .bucket(bucket)
+                .createBucketConfiguration(CreateBucketConfiguration.builder()		
+                .locationConstraint(Region.US_WEST_2.id())
+                .build())
+                .build();
+        this.mS3.createBucket(createBucketRequest);
     }
 
     /**
@@ -405,17 +423,20 @@ public class LocalCloud {
      */
     public void initSQS(){
         if(this.fromLocal){
-            mSQS = AmazonSQSClientBuilder
-                    .standard()
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withRegion(Regions.US_EAST_1)
+        	this.mSQS = SqsClient.builder()
+                    .region(Region.US_WEST_2)
+        			.credentialsProvider(this.credentials)  
                     .build();
         }else{
-            mSQS = AmazonSQSClientBuilder
-                    .standard()
-                    .withRegion(Regions.US_EAST_1)
+        	this.mSQS = SqsClient.builder()
+                    .region(Region.US_WEST_2)
                     .build();
         }
+    	String queueName = "queue" + System.currentTimeMillis();
+        CreateQueueRequest createQueueRequest = CreateQueueRequest.builder()
+        		.queueName(queueName)
+        		.build();
+    	this.mSQS.createQueue(createQueueRequest);
     }
 
     /**
@@ -476,8 +497,11 @@ public class LocalCloud {
      * @param message the message to be sent
      */
     public void sendSQSmessage(String queueURL, String message){
-        mSQS.sendMessage(new SendMessageRequest(queueURL, message));
-    }
+    	this.mSQS.sendMessage(SendMessageRequest.builder()
+                .queueUrl(queueURL)
+                .messageBody(message)
+                .build());
+    	}
 
     /**
      * receiveSQSmessage - receive messages from a specific queue
@@ -487,8 +511,9 @@ public class LocalCloud {
      */
     public List<Message> receiveSQSmessage(String queueURL){
         // Create request to retrieve a list of messages in the SQS queue
-        ReceiveMessageRequest request = new ReceiveMessageRequest(queueURL);
-        return mSQS.receiveMessage(request).getMessages();
+    	 ReceiveMessageRequest request = ReceiveMessageRequest.builder()
+                 .queueUrl(queueURL).build();
+        return this.mSQS.receiveMessage(request).messages();
     }
 
     /**
@@ -498,7 +523,7 @@ public class LocalCloud {
      * @return list of all messages received
      */
     public List<Message> receiveSQSmessage(ReceiveMessageRequest request){
-        return mSQS.receiveMessage(request).getMessages();
+        return this.mSQS.receiveMessage(request).messages();
     }
 
     /**
@@ -517,7 +542,10 @@ public class LocalCloud {
      * @param queueUrl URL of the queue
      */
     public void deleteSQSqueue(String queueUrl) {
-        mSQS.deleteQueue(new DeleteQueueRequest(queueUrl));
+    	DeleteQueueRequest deleteQueueRequest = DeleteQueueRequest.builder()
+    			.queueUrl(queueUrl)
+    			.build();
+        this.mSQS.deleteQueue(deleteQueueRequest);
     }
 
     /**
