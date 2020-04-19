@@ -1,5 +1,5 @@
 import java.io.*;
-
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,6 +14,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
@@ -30,6 +32,8 @@ import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+
 import java.util.AbstractMap.SimpleEntry;
 import software.amazon.awssdk.regions.Region;
 //snippet-start:[sqs.java2.sqs_example.import]
@@ -274,30 +278,33 @@ public class LocalCloud {
      * @param instanceId to terminate
      */
     public void terminateEC2instance(String instanceId){
-        TerminateInstancesRequest request = new TerminateInstancesRequest().withInstanceIds(instanceId);
+        TerminateInstancesRequest request = TerminateInstancesRequest.builder()
+        		.instanceIds(instanceId)
+        		.build();
         mEC2.terminateInstances(request);
     }
 
     /** @param instanceId to terminate
      */
     public void terminateEC2instance(Collection<String> instanceId){
-        TerminateInstancesRequest request = new TerminateInstancesRequest().withInstanceIds(instanceId);
-
+    	TerminateInstancesRequest request = TerminateInstancesRequest.builder()
+    			.instanceIds(instanceId)
+    			.build();
         mEC2.terminateInstances(request);
     }
 
     public void terminateEC2all(){
-        DescribeInstancesResult describeInstancesRequest = mEC2.describeInstances();
-        List<Reservation> reservations = describeInstancesRequest.getReservations();
+        DescribeInstancesResponse describeInstancesRequest = mEC2.describeInstances();
+        List<Reservation> reservations = describeInstancesRequest.reservations();
 
         Set<Instance> instances = new HashSet<Instance>();
         for (Reservation reservation : reservations) {
-            instances.addAll(reservation.getInstances());
+            instances.addAll(reservation.instances());
         }
 
         ArrayList<String> instancesId = new ArrayList<String>();
         for (Instance ins : instances){
-            instancesId.add(ins.getInstanceId());
+            instancesId.add(ins.instanceId());
         }
 
         terminateEC2instance(instancesId);
@@ -340,6 +347,17 @@ public class LocalCloud {
      * @return final S3 AWS url of the uploaded file
      */
     public String mUploadS3(String bucketName, String folderName, String key, File file){
+    	
+    	if (folderName != null){
+            this.mS3.createBucket(bucketName); // open connection with the S3 client
+            mS3.putObject(new PutObjectRequest(bucketName, folderName + "/" + key, file)); // upload the file to the bucket
+            return "https://s3.amazonaws.com/" + bucketName + "/" + folderName + "/" + key; // return the url of the uploaded file
+        } else{
+            mS3.createBucket(bucketName); // open connection with the S3 client
+            mS3.putObject(new PutObjectRequest(bucketName, key, file)); // upload the file to the bucket
+            return "https://s3.amazonaws.com/" + bucketName + "/" + key; // return the url of the uploaded file
+        }
+    	/**
         if (folderName != null){
             mS3.createBucket(bucketName); // open connection with the S3 client
             mS3.putObject(new PutObjectRequest(bucketName, folderName + "/" + key, file)); // upload the file to the bucket
@@ -349,6 +367,7 @@ public class LocalCloud {
             mS3.putObject(new PutObjectRequest(bucketName, key, file)); // upload the file to the bucket
             return "https://s3.amazonaws.com/" + bucketName + "/" + key; // return the url of the uploaded file
         }
+        */
     }
 
     public void mCreateFolderS3(String bucketName, String folderName) {
@@ -365,7 +384,7 @@ public class LocalCloud {
                 folderName + "/", emptyContent, metadata);
 
         // send request to S3 to create folder
-        mS3.putObject(putObjectRequest);
+        this.mS3.putObject(putObjectRequest);
     }
 
     /**
@@ -376,7 +395,7 @@ public class LocalCloud {
      * @return the file object
      */
     public S3Object mDownloadS3file(String bucketName, String key){
-        return mS3.getObject(new GetObjectRequest(bucketName, key));
+    	return this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
     }
 
     /**
