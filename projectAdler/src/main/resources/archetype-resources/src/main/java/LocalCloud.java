@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,21 +18,27 @@ import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.CreateTagsRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Instance;
+import software.amazon.awssdk.services.ec2.model.InstanceType;
 import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.RunInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
@@ -41,7 +48,6 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import java.util.AbstractMap.SimpleEntry;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3control.model.S3ObjectMetadata;
 import software.amazon.awssdk.services.sqs.model.ChangeMessageVisibilityRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueUrlResponse;
@@ -211,7 +217,14 @@ public class LocalCloud {
      * @param tag which tag attach to the new instances
      * @return list with all the instance's id created
      */
-    public ArrayList<String> initEC2instance(String imageId, Integer minCount, Integer maxCount, String type, String bucketName, String userData, String keyName, Tag tag){
+    public ArrayList<String> initEC2instance(String imageId, 
+    		Integer minCount, 
+    		Integer maxCount, 
+    		String type, 
+    		String bucketName, 
+    		String userData, 
+    		String keyName, 
+    		Tag tag){
 
         ArrayList<String> instancesId = new ArrayList<String>();
         String userScript = null;
@@ -225,6 +238,34 @@ public class LocalCloud {
         }
 
         // new request
+        
+        RunInstancesRequest runRequest = RunInstancesRequest.builder()
+                .imageId(imageId)
+                .instanceType(InstanceType.T1_MICRO)
+                .maxCount(maxCount)
+                .minCount(minCount)
+                .build();
+
+        RunInstancesResponse response = this.mEC2.runInstances(runRequest);
+
+        //String instanceId = response.instances().get(0).instanceId();
+
+        CreateTagsRequest tagRequest = CreateTagsRequest.builder()
+                .resources(instanceId)
+                .tags(tag)
+                .build();
+
+        try {
+            this.mEC2.createTags(tagRequest);
+            System.out.printf(
+                    "Successfully started EC2 instance %s based on AMI %s",
+                    instanceId, imageId);
+
+        } catch (Ec2Exception e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        //-------------
         RunInstancesRequest request = new RunInstancesRequest(imageId, minCount, maxCount);
         request.setInstanceType(type);
         request.withKeyName(keyName);
@@ -403,7 +444,8 @@ public class LocalCloud {
      * @return the file object
      */
     public S3Object mDownloadS3file(String bucketName, String key){
-    	return this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
+    	this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
+    	//return this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
     }
 
     /**
@@ -423,7 +465,8 @@ public class LocalCloud {
      * @param key "folder_name/file_name" : the file name + folder name if exists
      */
     public void mDeleteS3file(String bucketName, String key){
-        mS3.deleteObject(new DeleteObjectRequest(bucketName, key));
+    	DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder().bucket(bucketName).key(key).build();
+        this.mS3.deleteObject(deleteObjectRequest);
     }
 
     /**
@@ -431,18 +474,36 @@ public class LocalCloud {
      * @param bucketName the bucket name to be deleted
      */
     public void mDeleteS3bucket(String bucketName) {
-        mS3.deleteBucket(bucketName);
+    	DeleteBucketRequest deleteBucketRequest = DeleteBucketRequest.builder()
+    			.bucket(bucketName)
+    			.build();
+        this.mS3.deleteBucket(deleteBucketRequest);
     }
 
     /**
      * Deletes a bucket and all the files inside
      */
     public void mDeleteS3bucketFiles(String bucketName){
-        ObjectListing objectListing = mS3.listObjects(new ListObjectsRequest().withBucketName(bucketName));
-        for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
-            mDeleteS3file(bucketName, objectSummary.getKey());
+
+        try {
+             ListObjectsRequest listObjects = ListObjectsRequest
+                     .builder()
+                     .bucket(bucketName)
+                     .build();
+
+             ListObjectsResponse res = this.mS3.listObjects(listObjects);
+             List<S3Object> objects = res.contents();
+             
+             for (S3Object objectSummary : objects) {
+                 mDeleteS3file(bucketName, objectSummary.key());
+             }
+             mDeleteS3bucket(bucketName);
+             
+        } catch (S3Exception e) {
+            System.err.println(e.awsErrorDetails().errorMessage());
+            System.exit(1);
         }
-        mDeleteS3bucket(bucketName);
+    	
     }
 
     /**
@@ -560,7 +621,11 @@ public class LocalCloud {
      * @param receiptHandle of the message to delete
      */
     public void deleteSQSmessage(String queueUrl, String receiptHandle) {
-        mSQS.deleteMessage(new DeleteMessageRequest(queueUrl, receiptHandle));
+    	DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
+                .queueUrl(queueUrl)
+                .receiptHandle(receiptHandle)
+                .build();
+        this.mSQS.deleteMessage(deleteMessageRequest);
     }
 
     /**
@@ -579,7 +644,7 @@ public class LocalCloud {
      * Delete all the Queues in SQS
      */
     public void deleteSQSqueueMessages(){
-        for (String queueUrl : mSQS.listQueues().getQueueUrls()) {
+        for (String queueUrl : this.mSQS.listQueues().queueUrls()) {
             deleteSQSqueue(queueUrl);
         }
     }
