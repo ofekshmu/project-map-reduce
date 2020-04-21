@@ -29,16 +29,20 @@ import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.DeleteQueueRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ec2.model.CreateTagsRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Instance;
+import software.amazon.awssdk.services.ec2.model.InstanceStateChange;
 import software.amazon.awssdk.services.ec2.model.InstanceType;
 import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.RunInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.RunInstancesResponse;
+import software.amazon.awssdk.services.ec2.model.StartInstancesRequest;
+import software.amazon.awssdk.services.ec2.model.StartInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Ec2Exception;
 import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
@@ -259,10 +263,10 @@ public class LocalCloud {
 
         for (Instance instance : response.instances()) {
             try {
-                if (instance.state().name().equals("pending") || instance.state().getName().equals("running")){
+                if (instance.state().name().equals("pending") || instance.state().name().equals("running")){
                     instanceId = instance.instanceId();
                     
-                    tagRequest.ceId);
+                    //tagRequest.ceId);
                             
                     
                     //tagsRequest.withResources(instanceID);
@@ -286,13 +290,14 @@ public class LocalCloud {
      */
     public Boolean restartEC2instance(String instanceID){
         try{
-            StartInstancesRequest request = new StartInstancesRequest();
-            request.withInstanceIds(instanceID);
-            StartInstancesResult result = mEC2.startInstances(request);
-            List<InstanceStateChange> instancesStates = result.getStartingInstances();
+            StartInstancesRequest request = StartInstancesRequest.builder()
+            		.instanceIds(instanceID)
+            		.build();
+            StartInstancesResponse result = mEC2.startInstances(request);
+            List<InstanceStateChange> instancesStates = result.startingInstances();
             for (InstanceStateChange instanceState : instancesStates){
-                if (instanceState.getInstanceId().equals(instanceID)){
-                    return instanceState.getCurrentState().getName().equals("running") || instanceState.getCurrentState().getName().equals("pending");
+                if (instanceState.instanceId().equals(instanceID)){
+                    return instanceState.currentState().name().equals("running") || instanceState.currentState().name().equals("pending");
                 }
             }
             return true;
@@ -425,8 +430,11 @@ public class LocalCloud {
      * @param key "folder_name/file_name" : the file name + folder name if exists
      * @return the file object
      */
-    public S3Object mDownloadS3file(String bucketName, String key){
-    	this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
+    public File mDownloadS3file(String bucketName, String key){ //TODO CHANGE MANAGER
+    	File file = new File(System.currentTimeMillis() + bucketName);
+    	this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build(),
+    			ResponseTransformer.toFile(file));
+        return file;
     	//return this.mS3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
     }
 
@@ -436,8 +444,8 @@ public class LocalCloud {
      * @param key "folder_name/file_name" : the file name + folder name if exists
      * @return true if the file exists in this bucket
      */
-    public boolean doesFileExist(String bucketName, String key){
-        return mS3.doesObjectExist(bucketName, key);
+    public boolean doesFileExist(String bucketName, String key){ //TODO WHERE IS IT BEING USED
+        return this.mS3.doesObjectExist(bucketName, key);
     }
 
     /**
@@ -502,11 +510,6 @@ public class LocalCloud {
                     .region(Region.US_WEST_2)
                     .build();
         }
-    	String queueName = "queue" + System.currentTimeMillis();
-        CreateQueueRequest createQueueRequest = CreateQueueRequest.builder()
-        		.queueName(queueName)
-        		.build();
-    	this.mSQS.createQueue(createQueueRequest);
     }
 
     /**
@@ -516,28 +519,28 @@ public class LocalCloud {
      * @return list of each queue's URL
      */
     public HashMap<String, String> initSQSqueues(ArrayList<Entry<String, String>> queues){
+    	
         HashMap<String, String> queuesURLs = new HashMap<String, String>();
         String queueURL = null;
 
         for (Entry<String, String> pair : queues) {
             String queueName = pair.getKey();
             try {
-                queueURL = mSQS.getQueueUrl(queueName).getQueueUrl();
+            	GetQueueUrlRequest createQueueRequest = GetQueueUrlRequest.builder().build();
+                queueURL = mSQS.getQueueUrl(createQueueRequest).queueUrl();
             }
-            catch(AmazonServiceException exception) {
-                if (exception.getStatusCode() == 400) { // not found
-                    CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
-                    Map<String, String> attributes = new HashMap<String, String>();
-                    attributes.put("VisibilityTimeout", pair.getValue());
-                    createQueueRequest.setAttributes(attributes);
-                    queueURL = mSQS.createQueue(createQueueRequest).getQueueUrl();
+            catch(AwsServiceException exception) {
+                if (exception.statusCode() == 400) { // not found
+                	CreateQueueRequest createQueueRequest = CreateQueueRequest.builder()
+                    		.queueName(queueName)
+                    		.build();                   		
+                    queueURL = mSQS.createQueue(createQueueRequest).queueUrl();
                     System.out.println("             The following queue has been created : " + queueURL + "\n");
                 }
                 else {
                     System.out.println("Caught Exception: " + exception.getMessage());
-                    System.out.println("Reponse Status Code: " + exception.getStatusCode());
-                    System.out.println("Error Code: " + exception.getErrorCode());
-                    System.out.println("Request ID: " + exception.getRequestId());
+                    System.out.println("Reponse Status Code: " + exception.statusCode());
+                    System.out.println("Request ID: " + exception.requestId());
                 }
             } catch (Exception exception){
                 exception.printStackTrace();
@@ -640,7 +643,7 @@ public class LocalCloud {
      */
     private String getScript(String bucketName, String userData) {
         //Download script from S3
-        S3Object object = mDownloadS3file(bucketName, userData);
+        S3Object object = mDownloadS3file(bucketName, userData); // TODO function returns input stream
         InputStream input = object.getObjectContent();
 
         String script = null;
