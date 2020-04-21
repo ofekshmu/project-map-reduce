@@ -251,48 +251,30 @@ public class LocalCloud {
         //String instanceId = response.instances().get(0).instanceId();
 
         CreateTagsRequest tagRequest = CreateTagsRequest.builder()
-                .resources(instanceId)
                 .tags(tag)
                 .build();
+        //this.mEC2.createTags(tagRequest);
+        // check if to create a new request each time, or edit the current one
+        String instanceId;
 
-        try {
-            this.mEC2.createTags(tagRequest);
-            System.out.printf(
-                    "Successfully started EC2 instance %s based on AMI %s",
-                    instanceId, imageId);
-
-        } catch (Ec2Exception e) {
-            System.err.println(e.getMessage());
-            System.exit(1);
-        }
-        //-------------
-        RunInstancesRequest request = new RunInstancesRequest(imageId, minCount, maxCount);
-        request.setInstanceType(type);
-        request.withKeyName(keyName);
-        request.withIamInstanceProfile(new IamInstanceProfileSpecification().withName(keyName));
-        if (userScript != null)
-            request.withUserData(userScript);
-
-        List<Instance> instances = mEC2.runInstances(request).getReservation().getInstances();
-        List<Tag> tags = new ArrayList<Tag>();
-        tags.add(tag);
-        CreateTagsRequest tagsRequest = new CreateTagsRequest();
-        tagsRequest.setTags(tags);
-        String instanceID;
-
-        // Create tag request for each instance (if we want to denote 20 workers then we want tags for them)
-        for (Instance instance : instances) {
+        for (Instance instance : response.instances()) {
             try {
-                if (instance.getState().getName().equals("pending") || instance.getState().getName().equals("running")){
-                    instanceID = instance.getInstanceId();
-                    tagsRequest.withResources(instanceID);
-                    mEC2.createTags(tagsRequest);
-                    instancesId.add(instanceID);
+                if (instance.state().name().equals("pending") || instance.state().getName().equals("running")){
+                    instanceId = instance.instanceId();
+                    
+                    tagRequest.ceId);
+                            
+                    
+                    //tagsRequest.withResources(instanceID);
+                    this.mEC2.createTags(tagsRequest);
+                    instancesId.add(instanceId);
                 }
-            } catch (Exception e) {
-                System.out.println("             Error Message on initEC2instance instances tag request : " + e.getMessage());
+            } catch (Ec2Exception e) {
+                System.err.println(e.getMessage());
+                System.exit(1);
             }
         }
+        //-------------
         return instancesId;
     }
 
