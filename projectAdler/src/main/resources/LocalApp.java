@@ -9,7 +9,9 @@ import java.util.logging.Level;
 import javax.security.auth.login.AccountException;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.awscore.internal.AwsErrorCode;
-import software.amazon.awssdk.services.s3.model.Tag;
+import software.amazon.awssdk.services.ec2.model.InstanceType;
+import software.amazon.awssdk.services.ec2.model.Tag;
+
 import software.amazon.awssdk.services.sqs.model.Message;
 
 
@@ -173,12 +175,6 @@ public class LocalApp {
                     "a serious internal problem while trying to communicate with SQS, such as not " +
                     "being able to access the network.");
 
-        } catch (AccountException ace) {
-            System.out.println("Caught an AmazonClientException, which means the client encountered " +
-                    "a serious internal problem while trying to communicate with SQS, such as not " +
-                    "being able to access the network.");
-            System.out.println("Error Message: " + ace.getMessage());
-
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -200,7 +196,7 @@ public class LocalApp {
         uploadScripts(myAWS, overwriteScript);
         uploadJars(myAWS, overwriteJars);
         ArrayList<String> managerInstance = myAWS.initEC2instance(Header.imageID,
-                1, 1, InstanceType.T2Micro.toString(), Header.PRE_UPLOAD_BUCKET_NAME,
+                1, 1, InstanceType.T2_MICRO.toString(), Header.PRE_UPLOAD_BUCKET_NAME,
                 Header.MANAGER_SCRIPT, Header.INSTANCE_MANAGER_KEY_NAME, TAG_MANAGER);
         return 	managerInstance.get(0);
     }
