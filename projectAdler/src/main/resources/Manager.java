@@ -10,23 +10,18 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import software.amazonaws.awssdk.AmazonClientException;
-import software.amazonaws.awssdk.AmazonServiceException;
-import software.amazonaws.awssdk.services.ec2.model.InstanceType;
-import software.amazonaws.awssdk.services.s3.AmazonS3URI;
-import software.amazonaws.awssdk.services.s3.model.S3Object;
-import software.amazonaws.awssdk.services.sqs.model.Message;
-import software.amazonaws.awssdk.services.ec2.model.Tag;
-import software.amazonaws.awssdk.services.sqs.model.ReceiveMessageRequest;
-
+import software.amazon.awssdk.services.ec2.model.InstanceType;
+import software.amazon.awssdk.services.ec2.model.Tag;
+import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 public class Manager {
 	
     private static Logger logger = Logger.getLogger(Manager.class.getName());
     private static HashMap<String, String> myAWSsqsURL;
     private static final int numOfThreads = 10;
-    private static Tag TAG_WORKER = new Tag("name","worker");
-    private static mAWS myAWS;
+    final   static Tag TAG_WORKER = Tag.builder().key("name").value("worker").build();
+    private static LocalCloud myAWS;
     private static String result_URL;
     private static boolean keep_Alive = true;
     private static ArrayList<String> instances_Id = new ArrayList<String>();
@@ -42,29 +37,29 @@ public class Manager {
             List<Message> messages = new ArrayList<Message>();
             Message message;
 
-            myAWS = new mAWS(false);
+            myAWS = new LocalCloud(false);
             myAWS.initAWSservices();
             initializeAllQueues(myAWS);
             logger.info(" Stage 2|  The Manager is listening to the queues : " + Header.INPUT_QUEUE_NAME + "\n");
 
-            while(keepAlive) {
+            while(keep_Alive) {
                 messages = getOneMessageFromSQS(myAWS, myAWSsqsURL.get(Header.INPUT_QUEUE_NAME), 0);
                 while (messages.isEmpty()) {
                     messages = getOneMessageFromSQS(myAWS, myAWSsqsURL.get(Header.INPUT_QUEUE_NAME), 0);
-                    if (!keepAlive){
+                    if (!keep_Alive){
                         break;
                     }
                     try {Thread.sleep(Header.SLEEP_LONG);}
                     catch (InterruptedException e){logger.warning(e.toString());}
                 }
-                if (!keepAlive) {
+                if (!keep_Alive) {
                     break;
                 }
                 message = messages.get(0);
 
                 // transfer this message from the input queue to the threads queue
-                myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_QUEUE_NAME), message.getReceiptHandle());
-                myAWS.sendSQSmessage(myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), message.getBody());
+                myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_QUEUE_NAME), message.receiptHandle());
+                myAWS.sendSQSmessage(myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), message.body());
                 messages.clear();
 
                 Runnable newTask = new Runnable() {
@@ -92,9 +87,9 @@ public class Manager {
                              * parsedMessage[4] = bucket name - String
                              * parsedMassege[5] = key value
                              */
-                            String[] parsedMessage = messageCurr.getBody().split(" ");
+                            String[] parsedMessage = messageCurr.body().split(" ");
                             logger.info(" Stage 3|    The manager recive this message from LocalApp: \n");
-                            logger.info("             " + messageCurr.getBody() + "\n");
+                            logger.info("             " + messageCurr.body() + "\n");
 
 
                             int n;
@@ -116,7 +111,7 @@ public class Manager {
                                 instances_Id.addAll(myAWS.initEC2instance(Header.imageID,
                                         1,
                                         (n-curret_Workers),
-                                        InstanceType.T2Micro.toString(),
+                                        InstanceType.T2_MICRO.toString(),
                                         Header.PRE_UPLOAD_BUCKET_NAME,
                                         Header.WORKER_SCRIPT,
                                         Header.INSTANCE_WORKER_KEY_NAME,
@@ -241,7 +236,7 @@ public class Manager {
     }
 
     //return one message from SQS
-    private static List<Message> getOneMessageFromSQS(mAWS myAWS, String queueURL, int TimeOut) {
+    private static List<Message> getOneMessageFromSQS(LocalCloud myAWS, String queueURL, int TimeOut) {
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueURL);
 
         // Retrieve 1 message
@@ -254,14 +249,14 @@ public class Manager {
     }
     
     //return the number of the workers
-    private static int numberOfWorkers(mAWS myAWS) {
+    private static int numberOfWorkers(LocalCloud myAWS) {
         return myAWS.getNumEC2instancesByTagState(TAG_WORKER, "running") +
                 myAWS.getNumEC2instancesByTagState(TAG_WORKER, "pending");
     }
     
     //send the LocalApp request to the workers.
     //wait for their answer and return to LocalAPP 
-    private static String[] analyzeTextFile(final mAWS myAWS, String shortLocalAppID, String bucket,String key){
+    private static String[] analyzeTextFile(final LocalCloud myAWS, String shortLocalAppID, String bucket,String key){
         String outputURL = null;
         java.util.logging.Logger
                 .getLogger("org.apache.pdfbox").setLevel(java.util.logging.Level.SEVERE);
@@ -296,7 +291,7 @@ public class Manager {
                 currMessages = myAWS.receiveSQSmessage(myAWSsqsURL.get(Header.OUTPUT_WORKERS_QUEUE_NAME));
                 for(Message message : currMessages){
                     // add this result from the worker to the Result-file
-                    out.println(message.getBody());
+                    out.println(message.body());
 
                     // delete this message from the output worker queue
                     myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.OUTPUT_WORKERS_QUEUE_NAME), message.getReceiptHandle());
@@ -322,7 +317,7 @@ public class Manager {
     }
 
     //inital the queues 
-    private static void initializeAllQueues(mAWS myAWS) {
+    private static void initializeAllQueues(LocalCloud myAWS) {
         ArrayList<Map.Entry<String, String>> queues = new ArrayList<Map.Entry<String,String>>();
         // queue from LocalApp to Head Manager
         queues.add(new AbstractMap.SimpleEntry<String, String>(Header.INPUT_QUEUE_NAME, "0"));
