@@ -37,5 +37,12 @@
 	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/sqs-2.11.9.jar"/>
 	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/utils-2.11.10.jar"/>
 	<classpathentry kind="lib" path="/home/ofek/git/project-map-reduce/projectAdler/lib/xmpbox-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/org.apache.commons.io.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files/fontbox-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files/pdfbox-2.0.19.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files(1)/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files(1)/fontbox-2.0.3.jar"/>
+	<classpathentry kind="lib" path="/home/ofek/Desktop/jar_files(1)/pdfbox-2.0.3.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

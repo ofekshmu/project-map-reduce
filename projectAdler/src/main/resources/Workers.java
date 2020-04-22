@@ -1,9 +1,25 @@
 package main.resources;
-
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
-
 import javax.security.auth.login.AccountException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -11,6 +27,11 @@ import org.apache.pdfbox.tools.PDFText2HTML;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import org.apache.commons.io.FileUtils;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 
 public class Workers {
 	
@@ -101,7 +122,9 @@ public class Workers {
         String outputLine = operation + ":" + "\t" + pdfURL + "\t";
         try {
             // Load PDF from URL
-            PDDocument pddDocument = PDDocument.load(new URL(pdfURL));
+        	File file_tmp = new File("filename");
+            FileUtils.copyURLToFile(new URL(pdfURL), file_tmp);
+            PDDocument pddDocument = PDDocument.load(file_tmp);
             if (!pddDocument.isEncrypted()) {
                 if (operation.equals("ToText")){
                     // ToText - convert the first page of the PDF file to a text file.
@@ -136,7 +159,7 @@ public class Workers {
 
                 }else if (operation.equals("ToHTML")){
                     // ToHTML - convert the first page of the PDF file to an HTML file.
-                    PDFText2HTML pdfText2HTML = new PDFText2HTML(Header.ENCODING);
+                    PDFText2HTML pdfText2HTML = new PDFText2HTML(); //removed: Header.ENCODING from title
                     pdfText2HTML.setStartPage(1);
                     pdfText2HTML.setEndPage(1);
                     FileWriter fWriter = null;
