@@ -132,7 +132,7 @@ public class LocalApp {
             }
             System.out.println("             Requesting " + n + " Workers to handle this request, each one suppose to handle " + (numOfLines/n) +" PDF's\n");
 
-            String msg = LocalAppID + " " + terminate + " " + n + " " + uploadedFileURL;
+            String msg = LocalAppID + " " + terminate + " " + n + " " + uploadedFileURL;  //need to add bucket and key
             send2SQS(myAWS, msg);
             if (terminate){
                 System.out.println("\n Stage 4|    Request with terminate message has been sent to the input queue with the following message : \n");

@@ -254,9 +254,6 @@ public class LocalCloud {
 
         //String instanceId = response.instances().get(0).instanceId();
 
-        CreateTagsRequest tagRequest = CreateTagsRequest.builder()
-                .tags(tag)
-                .build();
         //this.mEC2.createTags(tagRequest);
         // check if to create a new request each time, or edit the current one
         String instanceId;
@@ -266,11 +263,11 @@ public class LocalCloud {
                 if (instance.state().name().equals("pending") || instance.state().name().equals("running")){
                     instanceId = instance.instanceId();
                     
-                    //tagRequest.ceId);
-                            
-                    
-                    //tagsRequest.withResources(instanceID);
-                    this.mEC2.createTags(tagsRequest);
+                    CreateTagsRequest tagRequest = CreateTagsRequest.builder()
+                            .tags(tag)
+                            .resources(instanceId)
+                            .build(); 
+                    this.mEC2.createTags(tagRequest);
                     instancesId.add(instanceId);
                 }
             } catch (Ec2Exception e) {
@@ -358,16 +355,6 @@ public class LocalCloud {
             		.region(Region.US_WEST_2)        			
             		.build();
         }
-        
-        String bucket = "bucket" + System.currentTimeMillis();
-        CreateBucketRequest createBucketRequest = CreateBucketRequest
-                .builder()
-                .bucket(bucket)
-                .createBucketConfiguration(CreateBucketConfiguration.builder()		
-                .locationConstraint(Region.US_WEST_2.id())
-                .build())
-                .build();
-        this.mS3.createBucket(createBucketRequest);
     }
 
     /**
@@ -381,13 +368,26 @@ public class LocalCloud {
      */
     public String mUploadS3(String bucketName, String folderName, String key, File file){
     	
+		 CreateBucketRequest createBucketRequest = CreateBucketRequest
+	                .builder()
+	                .bucket(bucketName)
+	                .createBucketConfiguration(CreateBucketConfiguration.builder()		
+	                .locationConstraint(Region.US_WEST_2.id())
+	                .build())
+	                .build();
+	     this.mS3.createBucket(createBucketRequest);
+    	
     	if (folderName != null){
-            this.mS3.createBucket(bucketName); // open connection with the S3 client
-            mS3.putObject(new PutObjectRequest(bucketName, folderName + "/" + key, file)); // upload the file to the bucket
+    	     this.mS3.putObject(PutObjectRequest.builder().bucket(bucketName)
+    	    		.key(folderName + "/" + key)
+    	            .build(),
+    	            RequestBody.fromFile(file));
             return "https://s3.amazonaws.com/" + bucketName + "/" + folderName + "/" + key; // return the url of the uploaded file
         } else{
-            mS3.createBucket(bucketName); // open connection with the S3 client
-            mS3.putObject(new PutObjectRequest(bucketName, key, file)); // upload the file to the bucket
+        	this.mS3.putObject(PutObjectRequest.builder().bucket(bucketName)
+	    		 	.key(key)
+	                .build(),
+	                RequestBody.fromFile(file));
             return "https://s3.amazonaws.com/" + bucketName + "/" + key; // return the url of the uploaded file
         }
     	/**
@@ -643,7 +643,7 @@ public class LocalCloud {
      */
     private String getScript(String bucketName, String userData) {
         //Download script from S3
-        S3Object object = mDownloadS3file(bucketName, userData); // TODO function returns input stream
+        File file = mDownloadS3file(bucketName, userData); // TODO function returns input stream
         InputStream input = object.getObjectContent();
 
         String script = null;
