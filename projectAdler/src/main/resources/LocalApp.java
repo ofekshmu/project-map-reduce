@@ -296,7 +296,7 @@ public class LocalApp {
         try {
             // get the result file from S3
             URI fileToBeDownloaded = new URI(resultsURL);
-            AmazonS3URI s3URI = new AmazonS3URI(fileToBeDownloaded);
+            //AmazonS3URI s3URI = new AmazonS3URI(fileToBeDownloaded);
             File resultFile = myAWS.mDownloadS3file(s3URI.getBucket(), s3URI.getKey());
             Reader targetReader = new FileReader(resultFile); //conversion
             BufferedReader bufferedReader = new BufferedReader(targetReader);

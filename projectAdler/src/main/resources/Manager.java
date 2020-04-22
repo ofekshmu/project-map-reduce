@@ -10,6 +10,10 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+
+import javax.security.auth.login.AccountException;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.ec2.model.InstanceType;
 import software.amazon.awssdk.services.ec2.model.Tag;
 import software.amazon.awssdk.services.sqs.model.Message;
@@ -27,6 +31,7 @@ public class Manager {
     private static ArrayList<String> instances_Id = new ArrayList<String>();
     private static int curret_Workers = 0;
     private static Semaphore semaphore = new Semaphore(numOfThreads);
+    private static String LocalAppTerminate;
 
     
     public static void main(String[] args){
@@ -65,10 +70,10 @@ public class Manager {
                 Runnable newTask = new Runnable() {
                     @Override
                     public void run() {
-                        try{
+                    	try{
                         	semaphore.acquire();
-                            List<Message> messagesThread = new ArrayList<Message>();
-                            messagesThread = getOneMessageFromSQS(myAWS, myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), 180);
+                    		List<Message> messagesThread = new ArrayList<Message>();
+                        	messagesThread = getOneMessageFromSQS(myAWS, myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), 180);
                             while (messagesThread.isEmpty()) {
                                 messagesThread = getOneMessageFromSQS(myAWS, myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), 180);
 
@@ -116,42 +121,43 @@ public class Manager {
                                         Header.WORKER_SCRIPT,
                                         Header.INSTANCE_WORKER_KEY_NAME,
                                         TAG_WORKER));
-                                curret_Workers = checkWorkers(myAWS);
+                                curret_Workers = numberOfWorkers(myAWS);
                             }
                             logger.info("             Thread form thread poll handling this task\n");
                             logger.info(" Stage 4|    Analyzing the following input file : " + parsedMessage[3] + "\n");
-                            resultAns = analyzeTextFile(myAWS, parsedMessage[0].substring(0,12), parsedMessage[4],parsedMessage[5]);
+                            String[] resultAns = analyzeTextFile(myAWS, parsedMessage[0].substring(0,12), parsedMessage[4],parsedMessage[5]);
 
                             logger.info("\n Stage 5|    The computing is complete, the following message will send to the output queue : \n");
                             logger.info("               " + parsedMessage[0].substring(0,12) + " " + resultAns[0] + "\n");
-                            myAWS.sendSQSmessage(myAWSsqsURL.get(Header.OUTPUT_QUEUE_NAME), parsedMessage[0].substring(0,12) + " " + resultAns[0] + " " + resultAns[1] + " " resultAns[2]); //need to add bucket and key
+                            myAWS.sendSQSmessage(myAWSsqsURL.get(Header.OUTPUT_QUEUE_NAME), parsedMessage[0].substring(0,12) + " " + resultAns[0] + " " + resultAns[1] + " " +resultAns[2]); //need to add bucket and key
 
                             // Delete the message from the thread queue
-                            myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), messageCurr.getReceiptHandle());
+                            myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_THREAD_QUEUE_NAME), messageCurr.receiptHandle());
                             logger.info(" Stage 6|    Busy-wait to new messages..." + "\n");
 
                             // Check if terminate message has been received
                             if (Boolean.parseBoolean(parsedMessage[1])){
                                 // Stop retrieving messages from the input queue, and wait for stopping the running
-                                keepAlive = false;
+                            	LocalAppTerminate = parsedMessage[0].substring(0,12);
+                                keep_Alive = false;
                             }
                             
-                        }catch (AmazonServiceException ase) {
+                        }catch (AwsServiceException ase) {
                             logger.warning("Caught an AmazonServiceException, which means your request made it "
                                     + "to Amazon S3, but was rejected with an error response for some reason.");
                             logger.warning("Error Message:    " + ase.getMessage());
-                            logger.warning("HTTP Status Code: " + ase.getStatusCode());
-                            logger.warning("AWS Error Code:   " + ase.getErrorCode());
-                            logger.warning("Error Type:       " + ase.getErrorType());
-                            logger.warning("Request ID:       " + ase.getRequestId());
+                            logger.warning("HTTP Status Code: " + ase.statusCode());
+                            logger.warning("AWS Error Code:   " + ase.awsErrorDetails().errorCode());
+                            logger.warning("Error Type:       " + "AwsServiceException");
+                            logger.warning("Request ID:       " + ase.requestId());
 
-                        } catch (AmazonClientException ace) {
+                        } /**catch (AccountException ace) {
                             logger.warning("Caught an AmazonClientException, which means the client encountered "
                                     + "a serious internal problem while trying to communicate with S3, "
                                     + "such as not being able to access the network.");
                             logger.warning("Error Message: " + ace.getMessage());
 
-                        } catch (Exception e){
+                        }*/catch (Exception e){
                             logger.warning(e.toString());
                         } finally {
                             // if the Manager has been terminated before getting to this section this file will be
@@ -184,7 +190,7 @@ public class Manager {
             // Terminate the worker instances
             try {Thread.sleep(Header.SLEEP_LONG);}
             catch (InterruptedException e){logger.warning(e.toString());}
-            while (checkWorkers(myAWS) > 0){
+            while (numberOfWorkers(myAWS) > 0){
                 instances_Id.addAll(myAWS.getEC2instancesByTagState(TAG_WORKER, "running"));
                 instances_Id.addAll(myAWS.getEC2instancesByTagState(TAG_WORKER, "pending"));
                 myAWS.terminateEC2instance(instances_Id);
@@ -199,26 +205,25 @@ public class Manager {
                  System.out.println("Error has been occurred while upload the manager's logger + " + e.toString());
                 }
                 // Send terminate message ack to the local app that asked it
-            myAWS.sendSQSmessage(myAWSsqsURL.get(Header.OUTPUT_QUEUE_NAME), Header.TERMINATED_STRING + parsedMessage[0].substring(0,12));
+            myAWS.sendSQSmessage(myAWSsqsURL.get(Header.OUTPUT_QUEUE_NAME), Header.TERMINATED_STRING + LocalAppTerminate);
             logger.info(" Stage 7|    Manager has terminated his work" + "\n");
 
             
-        } catch (AmazonServiceException ase) {
+        } catch (AwsServiceException ase) {
             logger.warning("catch an AmazonServiceException, your request made it "
                     + "to Amazon S3, but was rejected with an error response for some reason.");
             logger.warning("Error Message:    " + ase.getMessage());
-            logger.warning("HTTP Status Code: " + ase.getStatusCode());
-            logger.warning("AWS Error Code:   " + ase.getErrorCode());
-            logger.warning("Error Type:       " + ase.getErrorType());
-            logger.warning("Request ID:       " + ase.getRequestId());
+            logger.warning("HTTP Status Code: " + ase.statusCode());
+            logger.warning("AWS Error Code:   " + ase.awsErrorDetails().errorCode());
+            logger.warning("Error Type:       " + "AwsServiceException");
+            logger.warning("Request ID:       " + ase.requestId());
 
-        } catch (AmazonClientException ace) {
+        } /**catch (AccountException ace) {
             logger.warning("catch an AmazonClientException, the client encountered "
                     + "a internal problem while trying to communicate with S3, "
                     + "such as not being able to access the network.");
             logger.warning("Error Message: " + ace.getMessage());
-
-        } catch (Exception e){
+        } */catch (Exception e){
             logger.warning(e.toString());
 
         }
@@ -237,13 +242,11 @@ public class Manager {
 
     //return one message from SQS
     private static List<Message> getOneMessageFromSQS(LocalCloud myAWS, String queueURL, int TimeOut) {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueURL);
-
-        // Retrieve 1 message
-        receiveMessageRequest.setMaxNumberOfMessages(1);
-
-        // Make the current message invisible for visibilityTimeOut seconds
-        receiveMessageRequest.setVisibilityTimeout(TimeOut);
+    	ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
+    			.maxNumberOfMessages(1)
+    			.visibilityTimeout(TimeOut)
+    			.queueUrl(queueURL)
+    			.build();
 
         return myAWS.receiveSQSmessage(receiveMessageRequest);
     }
@@ -257,7 +260,7 @@ public class Manager {
     //send the LocalApp request to the workers.
     //wait for their answer and return to LocalAPP 
     private static String[] analyzeTextFile(final LocalCloud myAWS, String shortLocalAppID, String bucket,String key){
-        String outputURL = null;
+    	String outputURL = null;
         java.util.logging.Logger
                 .getLogger("org.apache.pdfbox").setLevel(java.util.logging.Level.SEVERE);
 
@@ -294,7 +297,7 @@ public class Manager {
                     out.println(message.body());
 
                     // delete this message from the output worker queue
-                    myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.OUTPUT_WORKERS_QUEUE_NAME), message.getReceiptHandle());
+                    myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.OUTPUT_WORKERS_QUEUE_NAME), message.receiptHandle());
 
                     // decrease the count - when we done processing enough messages from the workers we exit
                     count_Line--;
@@ -313,7 +316,8 @@ public class Manager {
         }catch (Exception e){
             logger.warning(e.toString());
         }
-        return {outputURL,Header.APP_BUCKET_NAME+shortLocalAppID,Header.RESULT_FILE_NAME};
+        String[] arr = {outputURL,Header.APP_BUCKET_NAME+shortLocalAppID,Header.RESULT_FILE_NAME};
+        return arr;
     }
 
     //inital the queues 

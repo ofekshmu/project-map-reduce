@@ -1,11 +1,16 @@
 package main.resources;
 
-import software.amazonaws.awssdk.AmazonClientException;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
 
-import software.amazonaws.awssdk.services.sqs.model.ReceiveMessageRequest;
+import javax.security.auth.login.AccountException;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.tools.PDFText2HTML;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 public class Workers {
 	
@@ -24,7 +29,7 @@ public class Workers {
 
         try {
             /** 1. Init queues, get queues URLs*/
-            mAWS myAWS = new mAWS(false);
+            LocalCloud myAWS = new LocalCloud(false);
             myAWS.initAWSservices();
             initializeAllQueues(myAWS);
             //System.out.println(" Stage 2|    Start listening to the following queue : " + Header.OUTPUT_QUEUE_NAME + "\n");
@@ -58,44 +63,41 @@ public class Workers {
                     myAWS.sendSQSmessage(myAWSsqsURL.get(Header.OUTPUT_WORKERS_QUEUE_NAME), outputMessage);
 
                     /** 6. Delete the message from the workers queue */
-                    myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_WORKERS_QUEUE_NAME), currMessage.getReceiptHandle());
+                    myAWS.deleteSQSmessage(myAWSsqsURL.get(Header.INPUT_WORKERS_QUEUE_NAME), currMessage.receiptHandle());
                     //System.out.println(" Stage 6|    Busy-wait to new messages..." + "\n");
                 }
             }
-        } catch (AmazonServiceException ase) {
+        } catch (AwsServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "
                     + "to Amazon S3, but was rejected with an error response for some reason.");
             System.out.println("Error Message:    " + ase.getMessage());
-            System.out.println("HTTP Status Code: " + ase.getStatusCode());
-            System.out.println("AWS Error Code:   " + ase.getErrorCode());
-            System.out.println("Error Type:       " + ase.getErrorType());
-            System.out.println("Request ID:       " + ase.getRequestId());
-        } catch (AmazonClientException ace) {
+            System.out.println("HTTP Status Code: " + ase.statusCode());
+            System.out.println("Error Type:       " + "AwsServiceException");
+            System.out.println("AWS Error Code:   " + ase.awsErrorDetails().errorCode());
+            System.out.println("Request ID:       " + ase.requestId());
+        }/** catch (AccountException ace) {
             System.out.println("Caught an AmazonClientException, which means the client encountered "
                     + "a serious internal problem while trying to communicate with S3, "
                     + "such as not being able to access the network.");
             System.out.println("Error Message: " + ace.getMessage());
-        } catch (Exception e){
+        }*/ catch (Exception e){
             e.printStackTrace();
         }
     }
 
-    
-	
-    private static List<Message> getOneMessageFromSQS(mAWS myAWS, String queueURL) {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueURL);
-
-        // Retrieve 1 message
-        receiveMessageRequest.setMaxNumberOfMessages(1);
-
-        // Make the current message invisible for 10s
-        receiveMessageRequest.setVisibilityTimeout(10);
+    private static List<Message> getOneMessageFromSQS(LocalCloud myAWS, String queueURL) {
+    	
+    	ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
+    			.queueUrl(queueURL)
+    			.maxNumberOfMessages(1)
+    			.visibilityTimeout(10)
+    			.build();
 
         return myAWS.receiveSQSmessage(receiveMessageRequest);
     }
     
     
-    private static String convertPDF(mAWS myAWS, String shortLocalAppID, String operation, String pdfURL) {
+    private static String convertPDF(LocalCloud myAWS, String shortLocalAppID, String operation, String pdfURL) {
         String outputLine = operation + ":" + "\t" + pdfURL + "\t";
         try {
             // Load PDF from URL
@@ -164,18 +166,18 @@ public class Workers {
             }
             pddDocument.close();
 
-        } catch (AmazonServiceException ase) {
+        } catch (AwsServiceException ase) {
             // if the problem is with AWS service return null so other worker will try to handle this request
             System.out.println("Caught an AmazonServiceException, which means your request made it "
                     + "to Amazon S3, but was rejected with an error response for some reason.");
             System.out.println("Error Message:    " + ase.getMessage());
-            System.out.println("HTTP Status Code: " + ase.getStatusCode());
-            System.out.println("AWS Error Code:   " + ase.getErrorCode());
-            System.out.println("Error Type:       " + ase.getErrorType());
-            System.out.println("Request ID:       " + ase.getRequestId());
+            System.out.println("HTTP Status Code: " + ase.statusCode());
+            System.out.println("Error Type:       " + "AwsServiceException");
+            System.out.println("AWS Error Code:   " + ase.awsErrorDetails().errorCode());
+            System.out.println("Request ID:       " + ase.requestId());
             outputLine = null;
 
-        } catch (AmazonClientException ace) {
+        } catch (AccountException ace) {
             // if the problem is with AWS service return null so other worker will try to handle this request
             System.out.println("Caught an AmazonClientException, which means the client encountered "
                     + "a serious internal problem while trying to communicate with S3, "
@@ -196,7 +198,7 @@ public class Workers {
     }
 
     
-    private static String analyzeMessage(mAWS myAWS, Message currMessage){
+    private static String analyzeMessage(LocalCloud myAWS, Message currMessage){
         String outputMessage = null;
 
         try {
@@ -206,7 +208,7 @@ public class Workers {
              * parsedMessage[1] = operation
              * parsedMessage[2] = pdf URL
              */
-            String[] parsedMessage = currMessage.getBody().split("\t");
+            String[] parsedMessage = currMessage.body().split("\t");
             String shortLocalAppID = parsedMessage[0].substring(0, 12);
             String operation = parsedMessage[1];
             String fileURL = parsedMessage[2];
@@ -219,7 +221,7 @@ public class Workers {
         return outputMessage;
     }
     
-    private static void initializeAllQueues(mAWS myAWS) {
+    private static void initializeAllQueues(LocalCloud myAWS) {
         ArrayList<Map.Entry<String, String>> queues = new ArrayList<Map.Entry<String,String>>();
 
         // queue from Manager to Workers
