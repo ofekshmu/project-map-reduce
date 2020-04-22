@@ -1,4 +1,4 @@
-package src;
+package main.resources;
 
 import java.io.*;
 import java.net.URI;

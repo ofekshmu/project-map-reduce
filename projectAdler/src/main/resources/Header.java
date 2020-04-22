@@ -3,7 +3,7 @@
  * Assignment 1
  * Global (static) final values across all classes
  */
-
+package main.resources;
 
 public class Header {
     // Key name of the .pem file that contains identifiers to access the instances
