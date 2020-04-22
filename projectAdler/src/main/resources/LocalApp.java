@@ -360,7 +360,7 @@ public class LocalApp {
     private static void uploadScripts(LocalCloud myAWS, boolean overwrite) {
         System.out.println("\n Stage 2|    Uploading files (scripts & jars) to the general Bucket..." + "\n");
 
-        if (!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_SCRIPT) || overwrite){
+        if (/**TODO!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_SCRIPT) ||*/ overwrite){
 
             File managerScriptFile = new File("C:\\Users\\MaorA\\IdeaProjects\\DSP\\src\\scriptManager.txt");
             String path = myAWS.mUploadS3(Header.PRE_UPLOAD_BUCKET_NAME, null, Header.MANAGER_SCRIPT, managerScriptFile);
@@ -382,7 +382,7 @@ public class LocalApp {
      * @param overwrite doest we want to overwrite the jars on pre-upload bucket ?
      */
     private static void uploadJars(LocalCloud myAWS, boolean overwrite) {
-        if (!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_JAR) || overwrite){
+        if (/**TODO!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_JAR) ||*/ overwrite){
 
             File managerFile = new File("C:\\Users\\MaorA\\IdeaProjects\\DSP\\out\\artifacts\\ManagerApp_jar\\ManagerApp.jar");
             String path = myAWS.mUploadS3(Header.PRE_UPLOAD_BUCKET_NAME, null, Header.MANAGER_JAR, managerFile);

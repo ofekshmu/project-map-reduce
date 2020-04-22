@@ -445,9 +445,9 @@ public class LocalCloud {
      * @param key "folder_name/file_name" : the file name + folder name if exists
      * @return true if the file exists in this bucket
      */
-    public boolean doesFileExist(String bucketName, String key){ //TODO WHERE IS IT BEING USED
+   /** public boolean doesFileExist(String bucketName, String key){ //TODO WHERE IS IT BEING USED
         return this.mS3.doesObjectExist(bucketName, key);
-    }
+    }*/
 
     /**
      * mDeleteS3file - Delete file from a bucket

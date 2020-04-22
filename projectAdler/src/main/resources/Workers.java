@@ -30,7 +30,6 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import org.apache.commons.io.FileUtils;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 public class Workers {
