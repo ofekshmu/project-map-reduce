@@ -1,13 +1,16 @@
+package src;
+
 import java.io.*;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
-
+import javax.security.auth.login.AccountException;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.awscore.internal.AwsErrorCode;
 import software.amazon.awssdk.services.s3.model.Tag;
+import software.amazon.awssdk.services.sqs.model.Message;
 
 
 /**
@@ -170,7 +173,7 @@ public class LocalApp {
                     "a serious internal problem while trying to communicate with SQS, such as not " +
                     "being able to access the network.");
 
-        } catch (AmazonClientException ace) {
+        } catch (AccountException ace) {
             System.out.println("Caught an AmazonClientException, which means the client encountered " +
                     "a serious internal problem while trying to communicate with SQS, such as not " +
                     "being able to access the network.");
@@ -262,9 +265,9 @@ public class LocalApp {
         while(true) {
             messages = myAWS.receiveSQSmessage(queueUrl); // Receive List of all messages in queue
             for (Message message : messages) {
-                String[] msg = message.getBody().split(" ");
+                String[] msg = message.body().split(" ");
                 if(msg[0].equals(key)) {
-                    String myMessage = message.getReceiptHandle();
+                    String myMessage = message.receiptHandle();
                     // the terminate message have only msg[0]
                     if (msg.length > 1){
                         resultURL = msg[1];
@@ -298,9 +301,9 @@ public class LocalApp {
             // get the result file from S3
             URI fileToBeDownloaded = new URI(resultsURL);
             AmazonS3URI s3URI = new AmazonS3URI(fileToBeDownloaded);
-            S3Object resultFile = myAWS.mDownloadS3file(s3URI.getBucket(), s3URI.getKey());
-            InputStream inputStream  = resultFile.getObjectContent();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            File resultFile = myAWS.mDownloadS3file(s3URI.getBucket(), s3URI.getKey());
+            Reader targetReader = new FileReader(resultFile); //conversion
+            BufferedReader bufferedReader = new BufferedReader(targetReader);
             String line;
 
             // create the HTML file

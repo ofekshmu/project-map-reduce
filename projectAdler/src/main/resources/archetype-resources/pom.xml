@@ -4,6 +4,8 @@
   <groupId>projectAdler</groupId>
   <artifactId>projectAdler</artifactId>
   <version>$0.0.1-SNAPSHOT</version>
+  <name>projectAdler</name>
+  
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
