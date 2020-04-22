@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.ec2.model.InstanceType;
-import com.amazonaws.services.ec2.model.Tag;
-import com.amazonaws.services.s3.AmazonS3URI;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.sqs.model.Message;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.awscore.internal.AwsErrorCode;
+import software.amazon.awssdk.services.s3.model.Tag;
+
 
 /**
  * Distributed System Programming : Cloud Computing and Map-Reducce1 - 2019/Spring
@@ -19,15 +17,16 @@ import com.amazonaws.services.sqs.model.Message;
  * DSP Local Application
  * PDF Document Conversion in the Cloud
  *
- * Creators : Maor Assayag
- *            Refahel Shetrit
  *
  * LocalApp class - represent the Local Application
  * overwriteScript, overwriteJars to upload new jars\scripts to pre-upload bucket.
  */
 public class LocalApp {
-
-    final static Tag TAG_MANAGER = new Tag("name","manager");
+	
+	final static Tag TAG_MANAGER = Tag.builder()
+	        .key("name")
+	        .value("manager")
+	        .build();
     private static String LocalAppID;
     private static String shortLocalAppID;
 
@@ -51,24 +50,14 @@ public class LocalApp {
 
         // Promotion
         System.out.println("****************************************************************");
-        System.out.println(
-                "_____/\\\\\\\\\\\\\\\\\\______/\\\\\\______________/\\\\\\____/\\\\\\\\\\\\\\\\\\\\\\___        \n" +
-                        " ___/\\\\\\\\\\\\\\\\\\\\\\\\\\___\\/\\\\\\_____________\\/\\\\\\__/\\\\\\/////////\\\\\\_       \n" +
-                        "  __/\\\\\\/////////\\\\\\__\\/\\\\\\_____________\\/\\\\\\_\\//\\\\\\______\\///__      \n" +
-                        "   _\\/\\\\\\_______\\/\\\\\\__\\//\\\\\\____/\\\\\\____/\\\\\\___\\////\\\\\\_________     \n" +
-                        "    _\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\___\\//\\\\\\__/\\\\\\\\\\__/\\\\\\_______\\////\\\\\\______    \n" +
-                        "     _\\/\\\\\\/////////\\\\\\____\\//\\\\\\/\\\\\\/\\\\\\/\\\\\\___________\\////\\\\\\___   \n" +
-                        "      _\\/\\\\\\_______\\/\\\\\\_____\\//\\\\\\\\\\\\//\\\\\\\\\\_____/\\\\\\______\\//\\\\\\__  \n" +
-                        "       _\\/\\\\\\_______\\/\\\\\\______\\//\\\\\\__\\//\\\\\\_____\\///\\\\\\\\\\\\\\\\\\\\\\/___ \n" +
-                        "        _\\///________\\///________\\///____\\///________\\///////////_____\n");
         System.out.println(" Distriduted System Programming : PDF Document Conversion in the Cloud");
         System.out.println(" By Maor Assayag & Refahel Shetrit \n");
         System.out.println("\n Stage 1|    Local AWS App has been started \n");
 
-        // Initialize mAWS object and get a random UUID
+        // Initialize LocalCloud object and get a random UUID
         LocalAppID = UUID.randomUUID().toString();
         shortLocalAppID = LocalAppID.substring(0, 12); // used for uniq bucket name for each LocalApp
-        mAWS myAWS = new mAWS(true);
+        LocalCloud myAWS = new LocalCloud(true);
         myAWS.initAWSservices();
         String managerID;
         try {
@@ -169,14 +158,14 @@ public class LocalApp {
                     " /_____/   /_/ |_/   /_____/");
             System.out.println("****************************************************************\n");
 
-        } catch (AmazonServiceException e) {
+        } catch (AwsServiceException e) {
             System.out.println("Caught an AmazonServiceException, which means your request made it " +
                     "to Amazon SQS, but was rejected with an error response for some reason.");
             System.out.println("Error Message:    " + e.getMessage());
-            System.out.println("HTTP Status Code: " + e.getStatusCode());
-            System.out.println("Error Type:       " + e.getErrorType());
-            System.out.println("AWS Error Code:   " + e.getErrorCode());
-            System.out.println("Request ID:       " + e.getRequestId());
+            System.out.println("HTTP Status Code: " + e.statusCode());
+            System.out.println("Error Type:       " + "AwsServiceException");
+            System.out.println("AWS Error Code:   " + e.awsErrorDetails().errorCode());
+            System.out.println("Request ID:       " + e.requestId());
             System.out.println("Caught an AmazonClientException, which means the client encountered " +
                     "a serious internal problem while trying to communicate with SQS, such as not " +
                     "being able to access the network.");
@@ -199,12 +188,12 @@ public class LocalApp {
      * a baseline level of CPU performance with the ability to burst above the baseline.
      *
      * Image ID : ami-0080e4c5bc078760e - Linux 64 bit with full support of java
-     * @param myAWS mAWS object
+     * @param myAWS LocalCloud object
      * @param overwriteJars doest we want to overwrite the jars on pre-upload bucket ?
      * @param overwriteScript doest we want to overwrite the scripts on pre-upload bucket ?
      * @return the id of a manager instance that has been created
      */
-    private static String startManager(mAWS myAWS, boolean overwriteScript, boolean overwriteJars) {
+    private static String startManager(LocalCloud myAWS, boolean overwriteScript, boolean overwriteJars) {
         uploadScripts(myAWS, overwriteScript);
         uploadJars(myAWS, overwriteJars);
         ArrayList<String> managerInstance = myAWS.initEC2instance(Header.imageID,
@@ -217,10 +206,10 @@ public class LocalApp {
      * checkManager - method used to determined if the local app needs to start a new Manager
      * instance in aws. Checking if a Manager instance is running or stopped.
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @return instanceID if manager found, else null
      */
-    private static String[] checkManager(mAWS myAWS) {
+    private static String[] checkManager(LocalCloud myAWS) {
         String[] results = new String[3];
         results[0] = myAWS.getEC2instanceID(TAG_MANAGER, "running");
         results[1] = myAWS.getEC2instanceID(TAG_MANAGER, "pending");
@@ -233,11 +222,11 @@ public class LocalApp {
      * executed by a running manager.
      *
      * @param inputFileName location of the file to upload to S3
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param folder which folder in local app bucket
      * @return path (url) of the uploaded file in S3 - a confirmation of successful upload
      */
-    private static String uploadFileToS3(mAWS myAWS, String inputFileName, String folder) {
+    private static String uploadFileToS3(LocalCloud myAWS, String inputFileName, String folder) {
         return myAWS.mUploadS3(Header.APP_BUCKET_NAME + shortLocalAppID, folder, Header.INPUT_FILE_NAME, new File(inputFileName));
     }
 
@@ -247,10 +236,10 @@ public class LocalApp {
      * The method initialize a Queue of messages (if needed) and send a message with the input file's URL and
      * information about the number of workers, LocalAppID etc.
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param msg the message to be sent
      */
-    private static void send2SQS(mAWS myAWS, String msg) {
+    private static void send2SQS(LocalCloud myAWS, String msg) {
         String queueURL = myAWS.initSQSqueues(Header.INPUT_QUEUE_NAME, "0");
         myAWS.sendSQSmessage(queueURL, msg);
     }
@@ -261,11 +250,11 @@ public class LocalApp {
      * processing the requested operation)
      * Blocking-IO method that sleeps for 'sleep' ms
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param key UUID key associate with this instance of Local application (global LocalAppId)
      * @param sleep the amount of time in ms between searching for answer in the SQS
      */
-    private static String waitForAnswer(mAWS myAWS, String key, int sleep) {
+    private static String waitForAnswer(LocalCloud myAWS, String key, int sleep) {
         List<Message> messages;
         String resultURL = null;
         String queueUrl = myAWS.initSQSqueues(Header.OUTPUT_QUEUE_NAME, "0");
@@ -297,13 +286,13 @@ public class LocalApp {
      * downloadResult - method that downloads the summary file from S3 for creating
      * an html file representing the results.
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param resultsURL the returned URL from the Manager
      * @param outputFileName the local result HTML
      * @return result - a list of lines(String) from the format:
      *                  '<operation>: input file output file'
      */
-    private static String downloadResult(mAWS myAWS, String resultsURL, String outputFileName) {
+    private static String downloadResult(LocalCloud myAWS, String resultsURL, String outputFileName) {
         String outputFilePath = null;
         try {
             // get the result file from S3
@@ -351,11 +340,11 @@ public class LocalApp {
     /**
      * endManager - terminate the Manager Instance on EC2 service
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param managerID - EC2 Manger instance ID
      * @param sleep the amount of time in ms between searching for answer in the SQS
      */
-    private static void endManager(mAWS myAWS, String managerID, int sleep) {
+    private static void endManager(LocalCloud myAWS, String managerID, int sleep) {
         // wait for termination message from the Manager
         waitForAnswer(myAWS, Header.TERMINATED_STRING + shortLocalAppID, sleep);
 
@@ -366,10 +355,10 @@ public class LocalApp {
     /**
      * uploadScripts - upload the scripts to the pre-upload bucket on S3
      *
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param overwrite doest we want to overwrite the scripts on pre-upload bucket ?
      */
-    private static void uploadScripts(mAWS myAWS, boolean overwrite) {
+    private static void uploadScripts(LocalCloud myAWS, boolean overwrite) {
         System.out.println("\n Stage 2|    Uploading files (scripts & jars) to the general Bucket..." + "\n");
 
         if (!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_SCRIPT) || overwrite){
@@ -390,10 +379,10 @@ public class LocalApp {
 
     /**
      * uploadJars - upload the jars of Worker.java & ManagerApp.java to the pre-upload bucket on S3
-     * @param myAWS mAWS amazon web service object with EC2, S3 & SQS
+     * @param myAWS LocalCloud amazon web service object with EC2, S3 & SQS
      * @param overwrite doest we want to overwrite the jars on pre-upload bucket ?
      */
-    private static void uploadJars(mAWS myAWS, boolean overwrite) {
+    private static void uploadJars(LocalCloud myAWS, boolean overwrite) {
         if (!myAWS.doesFileExist(Header.PRE_UPLOAD_BUCKET_NAME, Header.MANAGER_JAR) || overwrite){
 
             File managerFile = new File("C:\\Users\\MaorA\\IdeaProjects\\DSP\\out\\artifacts\\ManagerApp_jar\\ManagerApp.jar");
