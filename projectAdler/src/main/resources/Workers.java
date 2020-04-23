@@ -1,4 +1,6 @@
 package main.resources;
+import org.apache.pdfbox.util.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,7 +23,7 @@ import java.io.*;
 import java.net.URL;
 import java.util.*;
 import javax.security.auth.login.AccountException;
-import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.*;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.tools.PDFText2HTML;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -30,6 +32,7 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import org.apache.commons.io.FileUtils;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 public class Workers {

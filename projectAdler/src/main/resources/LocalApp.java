@@ -138,7 +138,7 @@ public class LocalApp {
 
             /** 5. Wait & Receive the response from the Manager instance for the operation that has been requested*/
             System.out.println("\n Stage 5|    Waiting for response from the Manager on queue " + Header.OUTPUT_QUEUE_NAME + " ... \n");
-            String resultURL = waitForAnswer(myAWS, shortLocalAppID, 500);
+            String[] resultURL = waitForAnswer(myAWS, shortLocalAppID, 500);
             System.out.println("             Response from the Manager is ready on : "+ resultURL + "\n");
 
 
@@ -253,9 +253,12 @@ public class LocalApp {
      * @param key UUID key associate with this instance of Local application (global LocalAppId)
      * @param sleep the amount of time in ms between searching for answer in the SQS
      */
-    private static String waitForAnswer(LocalCloud myAWS, String key, int sleep) {
+    private static String[] waitForAnswer(LocalCloud myAWS, String key, int sleep) {
         List<Message> messages;
         String resultURL = null;
+        String bucketAns = null;
+        String keyAns = null;
+        String[] ans = {null,null,null};
         String queueUrl = myAWS.initSQSqueues(Header.OUTPUT_QUEUE_NAME, "0");
 
         while(true) {
@@ -267,16 +270,21 @@ public class LocalApp {
                     // the terminate message have only msg[0]
                     if (msg.length > 1){
                         resultURL = msg[1];
+                        bucketAns = msg[2];
+                        keyAns	  = msg[3];
                     }
                     myAWS.deleteSQSmessage(Header.OUTPUT_QUEUE_NAME, myMessage); // Delete the message from the queue
-                    return resultURL;
+                    ans[0] = resultURL;
+                    ans[1] = bucketAns;
+                    ans[2] = keyAns;
+                    return ans;
                 }
             }
             // busy-wait
             try {Thread.sleep(sleep);}
             catch (InterruptedException e){
                 e.printStackTrace();
-                return resultURL;
+                return ans ;
             }
         }
     }
@@ -291,13 +299,11 @@ public class LocalApp {
      * @return result - a list of lines(String) from the format:
      *                  '<operation>: input file output file'
      */
-    private static String downloadResult(LocalCloud myAWS, String resultsURL, String outputFileName) {
+    private static String downloadResult(LocalCloud myAWS, String[] results_strings, String outputFileName) {
         String outputFilePath = null;
         try {
             // get the result file from S3
-            URI fileToBeDownloaded = new URI(resultsURL);
-            //AmazonS3URI s3URI = new AmazonS3URI(fileToBeDownloaded);
-            File resultFile = myAWS.mDownloadS3file(s3URI.getBucket(), s3URI.getKey());
+            File resultFile = myAWS.mDownloadS3file(results_strings[1], results_strings[2]); // bucket, key
             Reader targetReader = new FileReader(resultFile); //conversion
             BufferedReader bufferedReader = new BufferedReader(targetReader);
             String line;

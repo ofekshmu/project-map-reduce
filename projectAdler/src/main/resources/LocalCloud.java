@@ -645,11 +645,12 @@ public class LocalCloud {
     private String getScript(String bucketName, String userData) {
         //Download script from S3
         File file = mDownloadS3file(bucketName, userData); // TODO function returns input stream
-        InputStream input = object.getObjectContent();
-
-        String script = null;
-        BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+        //InputStream input = object.getObjectContent();
+        String script = null; 
         try {
+            Reader targetReader = new FileReader(file);
+
+            BufferedReader reader = new BufferedReader(targetReader);
             StringBuilder stringBuilder = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null){
@@ -664,7 +665,7 @@ public class LocalCloud {
 
         String ans = null;
         try{
-            ans = new String(Base64.encode(script.getBytes()));
+            ans = new String(Base64.getEncoder().encode(script.getBytes()));
         }catch (NullPointerException npe){
             npe.printStackTrace();
         }
