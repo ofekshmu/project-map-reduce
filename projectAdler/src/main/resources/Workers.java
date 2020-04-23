@@ -1,5 +1,5 @@
 package main.resources;
-import org.apache.pdfbox.util.*;
+import org.apache.pdfbox.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -147,7 +147,7 @@ public class Workers {
                     outputLine = outputLine + newURL;
                     out.close();
 
-                } else if (operation.equals("ToImage")){
+                }   else if (operation.equals("ToImage")){
                     // ToImage - convert the first page of the PDF file to a "png" image.
                     PDFImageWriter writer = new PDFImageWriter();
                     writer.writeImage(pddDocument, Header.IMAGE_FORMAT, null,1,1, Header.IMAGE_NAME);

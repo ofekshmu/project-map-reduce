@@ -241,16 +241,28 @@ public class LocalCloud {
             //e.printStackTrace();
             System.out.println("\"             Starting an instance without a script \n");
         }
+        RunInstancesRequest runRequest;
 
         // new request
-        
-        RunInstancesRequest runRequest = RunInstancesRequest.builder()
+        if (userScript != null) {
+        	runRequest = RunInstancesRequest.builder()
                 .imageId(imageId)
                 .instanceType(InstanceType.T1_MICRO)
+                .userData(userScript)
                 .maxCount(maxCount)
                 .minCount(minCount)
                 .build();
 
+        }
+        else {
+        	runRequest = RunInstancesRequest.builder()
+                    .imageId(imageId)
+                    .instanceType(InstanceType.T1_MICRO)
+                    .maxCount(maxCount)
+                    .minCount(minCount)
+                    .build();
+
+        }
         RunInstancesResponse response = this.mEC2.runInstances(runRequest);
 
         //String instanceId = response.instances().get(0).instanceId();
